@@ -4,6 +4,17 @@
 
 @section('content')
 <!-- We use Alpine.js for Cart Logic on this view -->
+@if($errors->any())
+<div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
+    <p class="font-semibold mb-1">Checkout gagal:</p>
+    <ul class="list-disc ml-5 text-sm">
+        @foreach($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
+
 <div class="h-[calc(100vh-140px)] flex flex-col lg:flex-row gap-6" x-data="posSystem()">
     
     <!-- Left: Menu Selection -->
@@ -125,9 +136,14 @@
                     </div>
                 </div>
 
-                <button type="submit" :disabled="cart.length === 0" class="w-full bg-navy-900 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-navy-900/20 hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2">
-                    <i class="fas fa-check-circle"></i> Bayar & Cetak
-                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="submit" name="submit_action" value="hold" :disabled="cart.length === 0" class="w-full bg-amber-500 text-white font-bold py-3 rounded-xl hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2">
+                        <i class="fas fa-pause-circle"></i> Hold
+                    </button>
+                    <button type="submit" name="submit_action" value="pay" :disabled="cart.length === 0" class="w-full bg-navy-900 text-white font-bold py-3 rounded-xl shadow-lg shadow-navy-900/20 hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2">
+                        <i class="fas fa-check-circle"></i> Bayar & Cetak
+                    </button>
+                </div>
             </form>
         </div>
     </div>

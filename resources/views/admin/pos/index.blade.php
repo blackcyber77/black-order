@@ -31,6 +31,15 @@
                 </p>
             </div>
             <div class="text-right flex flex-col items-end gap-2">
+                @if($order->isHeld())
+                <span class="px-3 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700">
+                    HOLD
+                </span>
+                @else
+                <span class="px-3 py-1 text-xs font-bold rounded-full bg-indigo-100 text-indigo-700">
+                    AKTIF
+                </span>
+                @endif
                 <span class="px-3 py-1 text-xs font-bold rounded-full 
                     {{ $order->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
                     {{ $order->payment_status === 'paid' ? 'LUNAS' : 'BELUM DIBAYAR' }}
@@ -59,17 +68,54 @@
                     <span>Metode</span>
                     <span class="uppercase font-semibold">{{ $order->payment_method_label }}</span>
                 </div>
+                @if($order->cashier)
+                <div class="flex justify-between items-center mt-1 text-xs text-gray-500">
+                    <span>Kasir</span>
+                    <span class="font-semibold">{{ $order->cashier->name }}</span>
+                </div>
+                @endif
             </div>
         </div>
 
         <!-- Footer Actions -->
-        <div class="p-4 border-t border-gray-100 bg-gray-50 flex gap-2">
+        <div class="p-4 border-t border-gray-100 bg-gray-50 flex flex-wrap gap-2">
+            @if(!$order->isHeld() && $order->status !== 'completed' && $order->status !== 'cancelled')
+            <form action="{{ route('admin.pos.hold', $order->id) }}" method="POST" class="flex-1 min-w-[48%]">
+                @csrf
+                @method('PATCH')
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fas fa-pause-circle"></i> Hold
+                </button>
+            </form>
+            @endif
+
+            @if($order->isHeld() && $order->status !== 'completed' && $order->status !== 'cancelled')
+            <form action="{{ route('admin.pos.recall', $order->id) }}" method="POST" class="flex-1 min-w-[48%]">
+                @csrf
+                @method('PATCH')
+                <button type="submit" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fas fa-play-circle"></i> Recall
+                </button>
+            </form>
+            @endif
+
             @if($order->payment_status !== 'paid' || $order->status !== 'completed')
-            <form action="{{ route('admin.pos.pay', $order->id) }}" method="POST" class="flex-1" onsubmit="return confirm('Tandai pesanan ini LUNAS, selesai, dan kosongkan meja?')">
+            <form action="{{ route('admin.pos.pay', $order->id) }}" method="POST" class="flex-1 min-w-[48%]" onsubmit="return confirm('Tandai pesanan ini LUNAS, selesai, dan kosongkan meja?')">
                 @csrf
                 @method('PATCH')
                 <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm shadow-green-500/30">
                     <i class="fas fa-check-double"></i> Tandai Selesai
+                </button>
+            </form>
+            @endif
+
+            @if($order->status !== 'completed' && $order->status !== 'cancelled')
+            <form action="{{ route('admin.pos.void', $order->id) }}" method="POST" class="flex-1 min-w-[48%]" onsubmit="return promptVoidReason(this)">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="void_reason" value="">
+                <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fas fa-ban"></i> Void
                 </button>
             </form>
             @endif
@@ -97,4 +143,17 @@
 <div class="mt-6">
     {{ $orders->links() }}
 </div>
+
+<script>
+function promptVoidReason(form) {
+    const reason = prompt('Masukkan alasan void pesanan:');
+    if (!reason || reason.trim().length < 3) {
+        alert('Alasan void minimal 3 karakter.');
+        return false;
+    }
+
+    form.querySelector('input[name="void_reason"]').value = reason.trim();
+    return true;
+}
+</script>
 @endsection

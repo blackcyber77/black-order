@@ -12,8 +12,11 @@ class TowerController extends Controller
 {
     public function index()
     {
-        $towers = Tower::withCount('diningTables')->latest()->paginate(20);
-        return view('admin.towers.index', compact('towers'));
+        $tables = DiningTable::with('tower')
+            ->latest()
+            ->paginate(20);
+
+        return view('admin.towers.index', compact('tables'));
     }
 
     public function create()
@@ -66,6 +69,34 @@ class TowerController extends Controller
     }
 
     // Table Management
+    public function storeTableGlobal(Request $request)
+    {
+        $request->validate([
+            'table_number' => 'required|string|max:50|unique:dining_tables,table_number',
+        ]);
+
+        // Keep DB compatibility: each table still belongs to one tower internally.
+        $tower = Tower::where('is_active', true)->first()
+            ?? Tower::first()
+            ?? Tower::create([
+                'name' => 'Default',
+                'delivery_fee' => 0,
+                'is_active' => true,
+            ]);
+
+        $table = DiningTable::create([
+            'tower_id' => $tower->id,
+            'table_number' => $request->table_number,
+            'is_active' => true,
+            'status' => 'kosong',
+        ]);
+
+        $qrUrl = rtrim(config('app.url'), '/') . '/menu?table=' . $table->table_number;
+        $table->update(['qr_code' => $qrUrl]);
+
+        return back()->with('success', 'Meja berhasil ditambahkan');
+    }
+
     public function tables(Tower $tower)
     {
         $tables = $tower->diningTables()->latest()->paginate(20);

@@ -61,7 +61,7 @@
 
     <!-- Customer Info -->
     <div class="mb-2">
-        <p style="margin: 0;">Kasir : Admin</p>
+        <p style="margin: 0;">Kasir : {{ $order->cashier?->name ?? 'Admin' }}</p>
         <p style="margin: 0;">Pelanggan : {{ $order->customer_name }}</p>
         <p style="margin: 0;">Lokasi : {{ $order->table_number ? 'Meja ' . $order->table_number : 'Walk-In / Takeaway' }}</p>
     </div>

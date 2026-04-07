@@ -34,6 +34,12 @@
                     <span class="text-gray-600">Waktu</span>
                     <span>{{ $order->created_at->format('d M Y H:i') }}</span>
                 </div>
+                @if($order->held_at)
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Ditahan</span>
+                    <span class="text-amber-600 font-medium">{{ $order->held_at->format('d M Y H:i') }}</span>
+                </div>
+                @endif
                 @if($order->paid_at)
                 <div class="flex justify-between">
                     <span class="text-gray-600">Dibayar</span>
@@ -58,9 +64,21 @@
                     <span class="text-gray-600">Lokasi</span>
                     <span>{{ $order->full_location }}</span>
                 </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Kasir</span>
+                    <span>{{ $order->cashier?->name ?? '-' }}</span>
+                </div>
             </div>
         </div>
     </div>
+
+    @if($order->voided_at || $order->void_reason)
+    <div class="bg-red-50 border border-red-100 text-red-700 rounded-xl p-4 mb-6">
+        <h3 class="font-semibold mb-2"><i class="fas fa-ban mr-2"></i>Informasi Void</h3>
+        <p class="text-sm"><strong>Waktu:</strong> {{ $order->voided_at?->format('d M Y H:i') ?? '-' }}</p>
+        <p class="text-sm mt-1"><strong>Alasan:</strong> {{ $order->void_reason ?? '-' }}</p>
+    </div>
+    @endif
 
     <!-- Payment Gateway Info (if available) -->
     @if($order->payment_gateway || $order->payment_gateway_ref)

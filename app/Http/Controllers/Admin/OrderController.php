@@ -3,14 +3,43 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\MenuItem;
 use App\Models\Order;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    public function report(Request $request)
+    {
+        $source = $request->input('source', 'all');
+        $period = $request->input('period', 'today');
+        $menuItemId = $request->input('menu_item_id');
+
+        $query = Order::with(['cashier', 'items.menuItem']);
+
+        $this->applySourceFilter($query, $source);
+        $this->applyMenuFilter($query, $menuItemId);
+        $this->applyDateFilter($query, $request, $period);
+
+        $orders = $query->latest()->paginate(20)->appends($request->query());
+
+        $summaryQuery = Order::query();
+        $this->applyDateFilter($summaryQuery, $request, $period);
+        $summary = [
+            'total_orders' => (clone $summaryQuery)->count(),
+            'walk_in_orders' => (clone $summaryQuery)->whereNotNull('cashier_id')->count(),
+            'qr_orders' => (clone $summaryQuery)->whereNull('cashier_id')->count(),
+            'total_revenue' => (clone $summaryQuery)->sum('total'),
+        ];
+
+        $menuItems = MenuItem::orderBy('name')->get(['id', 'name']);
+
+        return view('admin.orders.report', compact('orders', 'menuItems', 'summary', 'source', 'period', 'menuItemId'));
+    }
+
     public function index(Request $request)
     {
-        $query = Order::with(['tower']);
+        $query = Order::with(['cashier']);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -20,18 +49,27 @@ class OrderController extends Controller
             $query->where('payment_status', $request->payment_status);
         }
 
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        if ($request->filled('cashier_id')) {
+            $query->where('cashier_id', $request->cashier_id);
+        }
+
         if ($request->filled('date')) {
             $query->whereDate('created_at', $request->date);
         }
 
         $orders = $query->latest()->paginate(20);
+        $cashiers = \App\Models\User::orderBy('name')->get(['id', 'name']);
 
-        return view('admin.orders.index', compact('orders'));
+        return view('admin.orders.index', compact('orders', 'cashiers'));
     }
 
     public function show(Order $order)
     {
-        $order->load(['tower', 'items.menuItem', 'transaction']);
+        $order->load(['cashier', 'items.menuItem', 'transaction']);
         return view('admin.orders.show', compact('order'));
     }
 
@@ -65,5 +103,60 @@ class OrderController extends Controller
         $order->update(['status' => $request->status]);
 
         return back()->with('success', 'Status pesanan diperbarui');
+    }
+
+    private function applySourceFilter($query, string $source): void
+    {
+        if ($source === 'walk-in') {
+            $query->whereNotNull('cashier_id');
+            return;
+        }
+
+        if ($source === 'qr') {
+            $query->whereNull('cashier_id');
+        }
+    }
+
+    private function applyMenuFilter($query, $menuItemId): void
+    {
+        if (empty($menuItemId)) {
+            return;
+        }
+
+        $query->whereHas('items', function ($itemQuery) use ($menuItemId) {
+            $itemQuery->where('menu_item_id', $menuItemId);
+        });
+    }
+
+    private function applyDateFilter($query, Request $request, string $period): void
+    {
+        if ($period === 'today') {
+            $query->whereDate('created_at', today());
+            return;
+        }
+
+        if ($period === 'week') {
+            $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+            return;
+        }
+
+        if ($period === 'month') {
+            $query->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year);
+            return;
+        }
+
+        if ($period === 'custom') {
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+
+            if (!empty($startDate)) {
+                $query->whereDate('created_at', '>=', $startDate);
+            }
+
+            if (!empty($endDate)) {
+                $query->whereDate('created_at', '<=', $endDate);
+            }
+        }
     }
 }

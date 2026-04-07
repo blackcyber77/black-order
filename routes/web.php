@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\TowerController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\MenuItemController;
 use App\Http\Controllers\Admin\SettingController;
 
 /*
@@ -77,23 +78,31 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/pos/create', [PosController::class, 'create'])->name('pos.create');
     Route::post('/pos', [PosController::class, 'store'])->name('pos.store');
     Route::patch('/pos/{order}/pay', [PosController::class, 'markAsPaid'])->name('pos.pay');
+    Route::patch('/pos/{order}/hold', [PosController::class, 'hold'])->name('pos.hold');
+    Route::patch('/pos/{order}/recall', [PosController::class, 'recall'])->name('pos.recall');
+    Route::patch('/pos/{order}/void', [PosController::class, 'void'])->name('pos.void');
     Route::get('/pos/{order}/receipt', [PosController::class, 'receipt'])->name('pos.receipt');
     
     // Categories
     Route::resource('categories', CategoryController::class);
+
+    // Menu Management (POS + QR Availability)
+    Route::resource('menus', MenuItemController::class)->except(['show']);
+    Route::get('/menus-availability', [MenuItemController::class, 'availability'])->name('menus.availability');
+    Route::patch('/menus/{menu}/availability', [MenuItemController::class, 'toggleAvailability'])->name('menus.toggle-availability');
     
     // Orders
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/report', [AdminOrderController::class, 'report'])->name('orders.report');
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}/verify', [AdminOrderController::class, 'verifyPayment'])->name('orders.verify');
     Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status');
     
 
     
-    // Towers & Tables
-    Route::resource('towers', TowerController::class)->except(['show']);
-    Route::get('/towers/{tower}/tables', [TowerController::class, 'tables'])->name('towers.tables');
-    Route::post('/towers/{tower}/tables', [TowerController::class, 'storeTable'])->name('towers.tables.store');
+    // Tables Management (Tower creation is disabled)
+    Route::get('/towers', [TowerController::class, 'index'])->name('towers.index');
+    Route::post('/tables', [TowerController::class, 'storeTableGlobal'])->name('tables.store');
     Route::delete('/tables/{table}', [TowerController::class, 'destroyTable'])->name('tables.destroy');
     Route::get('/tables/{table}/qr', [TowerController::class, 'generateQr'])->name('tables.qr');
     

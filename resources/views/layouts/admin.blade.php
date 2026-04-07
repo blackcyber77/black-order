@@ -47,6 +47,27 @@
             width: 1.5rem;
             text-align: center;
         }
+        body.sidebar-collapsed aside {
+            width: 5rem;
+        }
+        body.sidebar-collapsed aside .brand-text,
+        body.sidebar-collapsed aside .sidebar-section-label,
+        body.sidebar-collapsed aside .sidebar-label {
+            display: none;
+        }
+        body.sidebar-collapsed aside .sidebar-link {
+            justify-content: center;
+            border-left: none;
+            padding-left: 1rem;
+        }
+        body.sidebar-collapsed aside .sidebar-link i {
+            margin-right: 0 !important;
+        }
+        body.sidebar-collapsed aside .h-20 {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans antialiased text-slate-800">
@@ -58,7 +79,7 @@
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-6 transition">
                         <i class="fas fa-utensils text-white text-lg"></i>
                     </div>
-                    <div>
+                    <div class="brand-text">
                         <h1 class="font-bold text-xl tracking-wide">Order KITB</h1>
                         <p class="text-xs text-slate-400 uppercase tracking-wider">Admin Panel</p>
                     </div>
@@ -66,35 +87,41 @@
             </div>
 
             <nav class="flex-1 overflow-y-auto py-6 px-3 space-y-1">
-                <p class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Utama</p>
+                <p class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 sidebar-section-label">Utama</p>
                 <a href="{{ route('admin.dashboard') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.dashboard') ? 'active bg-white/5 text-white' : '' }}">
-                    <i class="fas fa-home mr-3 opacity-70"></i> Dashboard
+                    <i class="fas fa-home mr-3 opacity-70"></i><span class="sidebar-label">Dashboard</span>
                 </a>
 
-                <p class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-6 mb-2">Manajemen</p>
+                <p class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-6 mb-2 sidebar-section-label">Manajemen</p>
     
                 <a href="{{ route('admin.categories.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.categories.*') ? 'active bg-white/5 text-white' : '' }}">
-                    <i class="fas fa-tag mr-3 opacity-70"></i> Kategori
+                    <i class="fas fa-tag mr-3 opacity-70"></i><span class="sidebar-label">Kategori</span>
+                </a>
+                <a href="{{ route('admin.menus.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.menus.*') ? 'active bg-white/5 text-white' : '' }}">
+                    <i class="fas fa-utensils mr-3 opacity-70"></i><span class="sidebar-label">Menu POS</span>
+                </a>
+                <a href="{{ route('admin.menus.availability') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.menus.availability') ? 'active bg-white/5 text-white' : '' }}">
+                    <i class="fas fa-toggle-on mr-3 opacity-70"></i><span class="sidebar-label">Ketersediaan QR</span>
                 </a>
                 <a href="{{ route('admin.towers.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.towers.*') ? 'active bg-white/5 text-white' : '' }}">
-                    <i class="fas fa-chair mr-3 opacity-70"></i> Meja
+                    <i class="fas fa-chair mr-3 opacity-70"></i><span class="sidebar-label">Meja</span>
                 </a>
 
-                <p class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-6 mb-2">Transaksi</p>
+                <p class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-6 mb-2 sidebar-section-label">Transaksi</p>
                 <a href="{{ route('admin.pos.create') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.pos.create') ? 'active bg-white/5 text-white' : '' }}">
-                    <i class="fas fa-cash-register mr-3 opacity-70 text-green-400"></i> POS Kasir (Input)
+                    <i class="fas fa-cash-register mr-3 opacity-70 text-green-400"></i><span class="sidebar-label">POS Kasir (Input)</span>
                 </a>
-                <a href="{{ route('admin.pos.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.pos.index') ? 'active bg-white/5 text-white' : '' }}">
-                    <i class="fas fa-clipboard-list mr-3 opacity-70 text-orange-400"></i> Pesanan Aktif
+                <a href="{{ route('admin.orders.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.orders.*') && !request()->routeIs('admin.orders.report') && !request()->routeIs('admin.pos.*') ? 'active bg-white/5 text-white' : '' }}">
+                    <i class="fas fa-shopping-cart mr-3 opacity-70"></i><span class="sidebar-label">Pesanan</span>
                 </a>
-                <a href="{{ route('admin.orders.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.orders.*') && !request()->routeIs('admin.pos.*') ? 'active bg-white/5 text-white' : '' }}">
-                    <i class="fas fa-shopping-cart mr-3 opacity-70"></i> Pesanan
+                <a href="{{ route('admin.orders.report') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.orders.report') ? 'active bg-white/5 text-white' : '' }}">
+                    <i class="fas fa-chart-line mr-3 opacity-70"></i><span class="sidebar-label">Laporan Pesanan</span>
                 </a>
 
 
-                <p class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-6 mb-2">Sistem</p>
+                <p class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-6 mb-2 sidebar-section-label">Sistem</p>
                 <a href="{{ route('admin.settings.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.settings.*') ? 'active bg-white/5 text-white' : '' }}">
-                    <i class="fas fa-cog mr-3 opacity-70"></i> Pengaturan
+                    <i class="fas fa-cog mr-3 opacity-70"></i><span class="sidebar-label">Pengaturan</span>
                 </a>
             </nav>
 
@@ -102,7 +129,7 @@
                 <form action="{{ route('logout') }}" method="POST">
                     @csrf
                     <button type="submit" class="w-full flex items-center px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors">
-                        <i class="fas fa-sign-out-alt mr-3"></i> Logout
+                        <i class="fas fa-sign-out-alt mr-3"></i><span class="sidebar-label">Logout</span>
                     </button>
                 </form>
             </div>
@@ -114,6 +141,9 @@
             <header class="h-20 glass flex items-center justify-between px-8 sticky top-0 z-10 w-full">
                 <div class="flex items-center gap-4">
                     <button class="md:hidden text-slate-600 hover:text-navy-800 transition">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <button id="sidebar-toggle-desktop" class="hidden md:inline-flex text-slate-600 hover:text-navy-800 transition" title="Minimize Sidebar">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
                     <h2 class="text-xl font-bold text-navy-800">@yield('title')</h2>
@@ -153,10 +183,12 @@
             </main>
         </div>
     </div>
+    @stack('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const sidebar = document.querySelector('aside');
             const hamburgerBtn = document.querySelector('button.md\\:hidden');
+            const desktopToggleBtn = document.getElementById('sidebar-toggle-desktop');
             const contentOverlay = document.createElement('div');
             
             // Create overlay
@@ -184,6 +216,12 @@
                 contentOverlay.classList.add('opacity-0');
                 setTimeout(() => contentOverlay.classList.add('hidden'), 300);
             });
+
+            if (desktopToggleBtn) {
+                desktopToggleBtn.addEventListener('click', () => {
+                    document.body.classList.toggle('sidebar-collapsed');
+                });
+            }
         });
     </script>
 </body>

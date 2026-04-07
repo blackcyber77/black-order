@@ -19,6 +19,7 @@ class Order extends Model
         'customer_name',
         'customer_phone',
         'customer_email',
+        'cashier_id',
         'payment_method',
         'payment_status',
         'payment_proof',
@@ -28,6 +29,9 @@ class Order extends Model
         'payment_gateway_token',
         'payment_expiry',
         'paid_at',
+        'held_at',
+        'voided_at',
+        'void_reason',
         'subtotal',
         'service_fee',
         'delivery_fee',
@@ -43,7 +47,14 @@ class Order extends Model
         'total' => 'decimal:2',
         'payment_expiry' => 'datetime',
         'paid_at' => 'datetime',
+        'held_at' => 'datetime',
+        'voided_at' => 'datetime',
     ];
+
+    const STATUS_PENDING = 'pending';
+    const STATUS_PROCESSING = 'processing';
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_CANCELLED = 'cancelled';
 
     /**
      * Available payment methods:
@@ -92,6 +103,11 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function cashier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cashier_id');
+    }
+
     public function transaction()
     {
         return $this->hasOne(Transaction::class);
@@ -123,6 +139,14 @@ class Order extends Model
 
     public function getStatusLabelAttribute(): string
     {
+        if ($this->held_at && $this->status === self::STATUS_PENDING) {
+            return 'Ditahan';
+        }
+
+        if (!$this->held_at && $this->status === self::STATUS_PROCESSING) {
+            return 'Aktif';
+        }
+
         return match($this->status) {
             'pending' => 'Menunggu Konfirmasi',
             'confirmed' => 'Dikonfirmasi',
@@ -186,7 +210,7 @@ class Order extends Model
 
     public function scopePending($query)
     {
-        return $query->where('status', 'pending');
+        return $query->where('status', self::STATUS_PENDING);
     }
 
     public function scopeToday($query)
@@ -198,5 +222,21 @@ class Order extends Model
     {
         return $query->where('payment_status', 'pending')
                      ->whereIn('payment_method', [self::PAYMENT_QRIS, self::PAYMENT_BANK_TRANSFER]);
+    }
+
+    public function scopeHeld($query)
+    {
+        return $query->whereNotNull('held_at');
+    }
+
+    public function scopeActivePos($query)
+    {
+        return $query->whereNull('held_at')
+            ->whereIn('status', [self::STATUS_PENDING, self::STATUS_PROCESSING]);
+    }
+
+    public function isHeld(): bool
+    {
+        return $this->held_at !== null;
     }
 }

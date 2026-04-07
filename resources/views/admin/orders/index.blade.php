@@ -6,7 +6,7 @@
 <div class="flex justify-between items-center mb-6">
     <h2 class="text-lg font-semibold text-navy">Daftar Pesanan</h2>
     
-    <form action="{{ route('admin.orders.index') }}" method="GET" class="flex gap-2">
+    <form action="{{ route('admin.orders.index') }}" method="GET" class="flex gap-2 flex-wrap">
         <select name="status" onchange="this.form.submit()" class="px-4 py-2 border rounded-lg text-sm">
             <option value="">Semua Status</option>
             <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Menunggu</option>
@@ -14,6 +14,21 @@
             <option value="processing" {{ request('status') == 'processing' ? 'selected' : '' }}>Diproses</option>
             <option value="delivering" {{ request('status') == 'delivering' ? 'selected' : '' }}>Diantar</option>
             <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Selesai</option>
+            <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
+        </select>
+        <select name="payment_method" onchange="this.form.submit()" class="px-4 py-2 border rounded-lg text-sm">
+            <option value="">Semua Metode</option>
+            <option value="tunai" {{ request('payment_method') == 'tunai' ? 'selected' : '' }}>Tunai</option>
+            <option value="qris" {{ request('payment_method') == 'qris' ? 'selected' : '' }}>QRIS</option>
+            <option value="bank_transfer" {{ request('payment_method') == 'bank_transfer' ? 'selected' : '' }}>Transfer</option>
+        </select>
+        <select name="cashier_id" onchange="this.form.submit()" class="px-4 py-2 border rounded-lg text-sm">
+            <option value="">Semua Kasir</option>
+            @foreach($cashiers as $cashier)
+            <option value="{{ $cashier->id }}" {{ (string) request('cashier_id') === (string) $cashier->id ? 'selected' : '' }}>
+                {{ $cashier->name }}
+            </option>
+            @endforeach
         </select>
         <input type="date" name="date" value="{{ request('date') }}" onchange="this.form.submit()" class="px-4 py-2 border rounded-lg">
     </form>
@@ -25,6 +40,7 @@
             <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">No. Pesanan</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pelanggan</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kasir</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pembayaran</th>
@@ -36,6 +52,7 @@
             <tr>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-navy">{{ $order->order_number }}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">{{ $order->customer_name }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ $order->cashier?->name ?? '-' }}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange">{{ $order->formatted_total }}</td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <span class="px-2 py-1 text-xs rounded-full
@@ -79,7 +96,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="6" class="px-6 py-8 text-center text-gray-500">Belum ada pesanan</td>
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500">Belum ada pesanan</td>
             </tr>
             @endforelse
         </tbody>

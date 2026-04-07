@@ -10,6 +10,7 @@ use App\Models\DiningTable;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class PosController extends Controller
 {
@@ -54,7 +55,7 @@ class PosController extends Controller
      */
     public function index()
     {
-        $orders = Order::with(['items.menuItem'])
+        $orders = Order::with(['items.menuItem', 'cashier'])
             ->whereNotIn('status', ['completed', 'cancelled'])
             ->latest()
             ->paginate(20);
@@ -73,8 +74,9 @@ class PosController extends Controller
         $request->validate([
             'customer_name' => 'required|string|max:255',
             'order_items' => 'required|string', // JSON string from frontend
-            'payment_method' => "required|in:{$allowedMethods}",
+            'payment_method' => "nullable|in:{$allowedMethods}",
             'table_number' => 'nullable|string|max:50|exists:dining_tables,table_number',
+            'submit_action' => 'nullable|in:pay,hold',
         ]);
 
         $orderItemsData = json_decode($request->order_items, true);
@@ -117,25 +119,28 @@ class PosController extends Controller
 
             $total = $subtotal + $serviceFee + $deliveryFee;
 
-            // POS: Tunai = paid immediately, QRIS = pending verification
-            $isTunai = $request->payment_method === Order::PAYMENT_TUNAI;
-            $paymentStatus = $isTunai ? 'paid' : 'pending';
+            $submitAction = $request->input('submit_action', 'pay');
+            $paymentMethod = $request->input('payment_method', Order::PAYMENT_TUNAI);
+            $isHold = $submitAction === 'hold';
+            $isTunai = $paymentMethod === Order::PAYMENT_TUNAI;
+            $paymentStatus = (!$isHold && $isTunai) ? 'paid' : 'pending';
+            $status = $isHold ? Order::STATUS_PENDING : Order::STATUS_PROCESSING;
 
             $order = Order::create([
                 'tower_id' => null,
                 'table_number' => $tableNumber,
                 'customer_name' => $request->customer_name,
                 'customer_phone' => $request->customer_phone ?? '-',
-                'payment_method' => $request->payment_method,
+                'payment_method' => $paymentMethod,
                 'payment_status' => $paymentStatus,
-                'paid_at' => $isTunai ? now() : null,
+                'paid_at' => (!$isHold && $isTunai) ? now() : null,
                 'subtotal' => $subtotal,
                 'service_fee' => $serviceFee,
                 'delivery_fee' => $deliveryFee,
                 'total' => $total,
-                'status' => 'processing',
+                'status' => $status,
                 'notes' => $request->notes,
-            ]);
+            ] + $this->optionalLifecyclePayload($isHold));
 
             foreach ($itemsToCreate as $itemData) {
                 $order->items()->create($itemData);
@@ -143,11 +148,15 @@ class PosController extends Controller
 
             $order->transaction()->create([
                 'total_price' => $total,
-                'payment_method' => $request->payment_method,
+                'payment_method' => $paymentMethod,
                 'payment_status' => $paymentStatus,
             ]);
 
             DB::commit();
+
+            if ($isHold) {
+                return redirect()->route('admin.pos.index')->with('success', 'Pesanan berhasil ditahan dan bisa dipanggil kembali.');
+            }
 
             return redirect()->route('admin.pos.receipt', $order->id)->with('success', 'Pesanan POS berhasil dibuat');
 
@@ -164,11 +173,15 @@ class PosController extends Controller
     {
         DB::beginTransaction();
         try {
+            if ($order->status === Order::STATUS_CANCELLED) {
+                return back()->with('error', 'Pesanan void tidak dapat dilunasi.');
+            }
+
             $order->update([
                 'payment_status' => 'paid',
                 'paid_at' => now(),
-                'status' => 'completed'
-            ]);
+                'status' => Order::STATUS_COMPLETED
+            ] + $this->optionalLifecycleResetPayload());
 
             if ($order->transaction) {
                 $order->transaction->update(['payment_status' => 'paid']);
@@ -195,12 +208,118 @@ class PosController extends Controller
         }
     }
 
+    public function hold(Order $order)
+    {
+        if ($order->status === Order::STATUS_COMPLETED || $order->status === Order::STATUS_CANCELLED) {
+            return back()->with('error', 'Pesanan tidak bisa ditahan.');
+        }
+
+        $order->update([
+            'status' => Order::STATUS_PENDING,
+        ] + $this->optionalHeldPayload(now()));
+
+        return back()->with('success', 'Pesanan berhasil ditahan.');
+    }
+
+    public function recall(Order $order)
+    {
+        if (!$order->isHeld()) {
+            return back()->with('error', 'Pesanan ini tidak dalam status hold.');
+        }
+
+        if ($order->status === Order::STATUS_COMPLETED || $order->status === Order::STATUS_CANCELLED) {
+            return back()->with('error', 'Pesanan tidak bisa dipanggil kembali.');
+        }
+
+        $order->update([
+            'status' => Order::STATUS_PROCESSING,
+        ] + $this->optionalHeldPayload(null));
+
+        return back()->with('success', 'Pesanan berhasil dipanggil kembali.');
+    }
+
+    public function void(Request $request, Order $order)
+    {
+        $request->validate([
+            'void_reason' => 'required|string|min:3|max:500',
+        ]);
+
+        if ($order->status === Order::STATUS_COMPLETED) {
+            return back()->with('error', 'Pesanan yang sudah selesai tidak bisa di-void.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $order->update([
+                'status' => Order::STATUS_CANCELLED,
+            ] + $this->optionalVoidPayload($request->void_reason));
+
+            if ($order->table_number) {
+                DiningTable::where('table_number', $order->table_number)
+                    ->update(['status' => 'kosong']);
+            }
+
+            DB::commit();
+            return back()->with('success', 'Pesanan berhasil di-void.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal void pesanan: ' . $e->getMessage());
+        }
+    }
+
     /**
      * Halaman cetak struk
      */
     public function receipt(Order $order)
     {
-        $order->load(['items.menuItem']);
+        $order->load(['items.menuItem', 'cashier']);
         return view('admin.pos.receipt', compact('order'));
+    }
+
+    private function optionalLifecyclePayload(bool $isHold): array
+    {
+        $payload = [];
+        if (Schema::hasColumn('orders', 'cashier_id')) {
+            $payload['cashier_id'] = auth()->id();
+        }
+        if (Schema::hasColumn('orders', 'held_at')) {
+            $payload['held_at'] = $isHold ? now() : null;
+        }
+
+        return $payload;
+    }
+
+    private function optionalLifecycleResetPayload(): array
+    {
+        if (!Schema::hasColumn('orders', 'held_at')) {
+            return [];
+        }
+
+        return ['held_at' => null];
+    }
+
+    private function optionalHeldPayload($value): array
+    {
+        if (!Schema::hasColumn('orders', 'held_at')) {
+            return [];
+        }
+
+        return ['held_at' => $value];
+    }
+
+    private function optionalVoidPayload(string $reason): array
+    {
+        $payload = [];
+        if (Schema::hasColumn('orders', 'held_at')) {
+            $payload['held_at'] = null;
+        }
+        if (Schema::hasColumn('orders', 'voided_at')) {
+            $payload['voided_at'] = now();
+        }
+        if (Schema::hasColumn('orders', 'void_reason')) {
+            $payload['void_reason'] = $reason;
+        }
+
+        return $payload;
     }
 }
