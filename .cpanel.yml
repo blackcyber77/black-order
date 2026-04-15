@@ -1,35 +1,22 @@
 ---
 deployment:
   tasks:
-    # Deploy Laravel dari repo cPanel ke public_html
+    # Deploy Laravel — repo & web di folder yang sama (/scan)
     #
-    # ⚠️ SESUAIKAN variabel di bawah ini:
-    #   - USERNAME = username cPanel kamu
-    #   - Path composer & php (cek: which composer && which php)
+    # ⚠️ Ganti USERNAME dengan username cPanel kamu
+    # ⚠️ Cek path php & composer: which php && which composer
 
-    # 1) Set path
-    - export DEPLOYPATH=/home/USERNAME/public_html
-    - export REPOPATH=/home/USERNAME/scan
+    # 1) Set path project
+    - export PROJECTPATH=/home/USERNAME/scan
 
-    # 2) Sync semua file ke folder deploy (exclude file sensitif & cache)
-    - /bin/rsync -a --delete
-        --exclude='.git'
-        --exclude='node_modules'
-        --exclude='.env'
-        --exclude='storage/logs/*.log'
-        --exclude='storage/framework/cache/data/*'
-        --exclude='storage/framework/sessions/*'
-        --exclude='storage/framework/views/*'
-        $REPOPATH/ $DEPLOYPATH/
+    # 2) Install composer dependencies (production only)
+    - cd $PROJECTPATH && /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction 2>&1
 
-    # 3) Install composer dependencies (production only)
-    - cd $DEPLOYPATH && /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction 2>&1
+    # 3) Jalankan database migrations
+    - cd $PROJECTPATH && /usr/local/bin/php artisan migrate --force 2>&1
 
-    # 4) Jalankan database migrations
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan migrate --force 2>&1
-
-    # 5) Clear & rebuild cache Laravel
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan optimize:clear 2>&1
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan config:cache 2>&1
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan route:cache 2>&1
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan view:cache 2>&1
+    # 4) Clear & rebuild cache Laravel
+    - cd $PROJECTPATH && /usr/local/bin/php artisan optimize:clear 2>&1
+    - cd $PROJECTPATH && /usr/local/bin/php artisan config:cache 2>&1
+    - cd $PROJECTPATH && /usr/local/bin/php artisan route:cache 2>&1
+    - cd $PROJECTPATH && /usr/local/bin/php artisan view:cache 2>&1
