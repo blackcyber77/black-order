@@ -10,12 +10,13 @@ Tidak menggunakan GitHub Actions — semua dilakukan langsung dari cPanel.
 1. [Prasyarat](#1-prasyarat)
 2. [Persiapkan Repository GitHub](#2-persiapkan-repository-github)
 3. [Setup Git Version Control di cPanel](#3-setup-git-version-control-di-cpanel)
-4. [Konfigurasi .cpanel.yml](#4-konfigurasi-cpanelyml)
-5. [Deploy Pertama Kali](#5-deploy-pertama-kali)
-6. [Setup Laravel di Server](#6-setup-laravel-di-server)
-7. [Update & Deploy Berikutnya](#7-update--deploy-berikutnya)
-8. [Troubleshooting](#8-troubleshooting)
-9. [Tips & Best Practices](#9-tips--best-practices)
+4. [Setup Subdomain](#4-setup-subdomain)
+5. [Konfigurasi .cpanel.yml](#5-konfigurasi-cpanelyml)
+6. [Deploy Pertama Kali](#6-deploy-pertama-kali)
+7. [Setup Laravel di Server](#7-setup-laravel-di-server)
+8. [Update & Deploy Berikutnya](#8-update--deploy-berikutnya)
+9. [Troubleshooting](#9-troubleshooting)
+10. [Tips & Best Practices](#10-tips--best-practices)
 
 ---
 
@@ -87,12 +88,9 @@ https://github.com/blackcyber77/black-order.git
    | **Repository Path**      | `/home/USERNAME/scan`                                  |
    | **Repository Name**      | `black-order`                                          |
 
-   > **PENTING tentang Repository Path:**
-   >
+   > **Catatan:**
    > - Ganti `USERNAME` dengan username cPanel kamu (bisa dilihat di sidebar kiri cPanel)
-   > - **JANGAN** clone langsung ke `public_html`! Clone ke folder terpisah
-   > - Pada project ini, repo di-clone ke `/home/USERNAME/scan`
-   > - Nanti kita akan copy/deploy file-file yang dibutuhkan ke `public_html` menggunakan `.cpanel.yml`
+   > - Path `/home/USERNAME/scan` adalah lokasi repo sekaligus folder web subdomain
 
 4. Klik **Create**
 
@@ -108,77 +106,83 @@ Setelah berhasil, repository akan muncul di daftar **Git Version Control** denga
 
 ---
 
-## 4) Konfigurasi .cpanel.yml
+## 4) Setup Subdomain
+
+Karena project di-deploy di subdomain dengan document root `/scan`, pastikan pengaturan subdomain sudah benar:
+
+1. Buka cPanel → **Domains** atau **Subdomains**
+2. Cari subdomain kamu
+3. **Ubah Document Root** menjadi: `/home/USERNAME/scan/public`
+
+   > **Kenapa harus `/scan/public`?**  
+   > Laravel mengharuskan web server mengarah ke folder `public/` di dalam project.  
+   > Jika document root hanya `/scan`, maka file-file sensitif (`.env`, `config/`, dll) bisa diakses publik.
+
+**Alternatif — jika tidak bisa ubah Document Root:**
+
+Buat file `.htaccess` di root folder `/scan/`:
+
+```apache
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+```
+
+---
+
+## 5) Konfigurasi .cpanel.yml
 
 File `.cpanel.yml` mengontrol apa yang terjadi setiap kali kamu melakukan **deploy** dari Git cPanel.  
 File ini **harus ada di root project** (sejajar dengan `composer.json`).
 
-### Buat file `.cpanel.yml` di komputer lokal:
+Karena repo Git dan folder web adalah folder yang sama (`/scan`), konfigurasi menjadi sederhana — **tidak perlu rsync**:
 
 ```yaml
 ---
 deployment:
   tasks:
-    # 1) Copy semua file project ke public_html (kecuali folder public)
-    - export DEPLOYPATH=/home/USERNAME/public_html
-    - export REPOPATH=/home/USERNAME/scan
+    # Deploy Laravel — repo & web di folder yang sama (/scan)
+    - export PROJECTPATH=/home/USERNAME/scan
 
-    # 2) Sync file project (exclude folder public Laravel)
-    - /bin/rsync -a --delete --exclude='.git'
-        --exclude='node_modules'
-        --exclude='.env'
-        --exclude='storage/logs/*.log'
-        --exclude='storage/framework/cache/data/*'
-        --exclude='storage/framework/sessions/*'
-        --exclude='storage/framework/views/*'
-        $REPOPATH/ $DEPLOYPATH/
+    # Install composer dependencies (production only)
+    - cd $PROJECTPATH && /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction 2>&1
 
-    # 3) Install dependencies composer
-    - cd $DEPLOYPATH && /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction 2>&1
+    # Jalankan database migrations
+    - cd $PROJECTPATH && /usr/local/bin/php artisan migrate --force 2>&1
 
-    # 4) Jalankan migrasi database
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan migrate --force 2>&1
-
-    # 5) Clear & rebuild cache Laravel
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan optimize:clear 2>&1
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan config:cache 2>&1
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan route:cache 2>&1
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan view:cache 2>&1
+    # Clear & rebuild cache Laravel
+    - cd $PROJECTPATH && /usr/local/bin/php artisan optimize:clear 2>&1
+    - cd $PROJECTPATH && /usr/local/bin/php artisan config:cache 2>&1
+    - cd $PROJECTPATH && /usr/local/bin/php artisan route:cache 2>&1
+    - cd $PROJECTPATH && /usr/local/bin/php artisan view:cache 2>&1
 ```
 
-> ### ⚠️ PENTING — Sesuaikan path berikut:
+> ### ⚠️ SESUAIKAN:
 >
-> | Variabel       | Ganti dengan                                      |
-> | -------------- | ------------------------------------------------- |
-> | `USERNAME`     | Username cPanel kamu                               |
-> | `DEPLOYPATH`   | Folder tujuan deploy (biasanya `/home/user/public_html` atau subdomain) |
-> | `REPOPATH`     | Path repository yang kamu set di langkah 3         |
->
-> ### Cek path `composer` dan `php`:
->
-> Login ke **Terminal cPanel** lalu jalankan:
-> ```bash
-> which composer
-> which php
-> ```
-> Jika hasilnya berbeda, sesuaikan path di `.cpanel.yml`.
-> Contoh umum:
-> - `/usr/local/bin/composer` atau `/usr/bin/composer` atau `~/bin/composer`
-> - `/usr/local/bin/php` atau `/usr/bin/php` atau `/usr/local/bin/ea-php82`
+> - Ganti `USERNAME` dengan username cPanel kamu
+> - Cek path `composer` dan `php` di server:
+>   ```bash
+>   which composer
+>   which php
+>   ```
+>   Contoh umum:
+>   - `/usr/local/bin/composer` atau `/usr/bin/composer` atau `~/bin/composer`
+>   - `/usr/local/bin/php` atau `/usr/bin/php` atau `/usr/local/bin/ea-php82`
 
 ### Commit dan push `.cpanel.yml`:
 
 ```bash
 git add .cpanel.yml
-git commit -m "tambah konfigurasi deploy cpanel"
+git commit -m "update konfigurasi deploy cpanel"
 git push origin main
 ```
 
 ---
 
-## 5) Deploy Pertama Kali
+## 6) Deploy Pertama Kali
 
-### 5a) Pull update di cPanel
+### 6a) Pull update di cPanel
 
 1. Buka **Git™ Version Control** di cPanel
 2. Klik **Manage** pada repository `black-order`
@@ -189,24 +193,24 @@ git push origin main
 > Deploy akan menjalankan semua task yang ada di `.cpanel.yml` secara berurutan.
 > Kamu bisa melihat log output di halaman yang sama.
 
-### 5b) Verifikasi deploy berhasil
+### 6b) Verifikasi deploy berhasil
 
 Cek log deploy di halaman **Pull or Deploy**. Pastikan semua task berstatus sukses (tidak ada error merah).
 
 ---
 
-## 6) Setup Laravel di Server
+## 7) Setup Laravel di Server
 
 Setelah deploy pertama berhasil, ada beberapa hal yang perlu di-setup **sekali saja** melalui **Terminal cPanel**:
 
-### 6a) Buat file `.env`
+### 7a) Buat file `.env`
 
 ```bash
-cd ~/public_html
+cd ~/scan
 cp .env.example .env
 ```
 
-### 6b) Edit `.env` untuk production
+### 7b) Edit `.env` untuk production
 
 ```bash
 nano .env
@@ -218,7 +222,7 @@ Sesuaikan nilai-nilai berikut:
 APP_NAME="Black Order"
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://namadomain.com
+APP_URL=https://subdomain.namadomain.com
 
 DB_CONNECTION=mysql
 DB_HOST=localhost
@@ -232,38 +236,39 @@ DB_PASSWORD=password_database
 
 Simpan: `Ctrl+O` → `Enter` → `Ctrl+X`
 
-### 6c) Generate APP_KEY
+### 7c) Generate APP_KEY
 
 ```bash
-cd ~/public_html
+cd ~/scan
 php artisan key:generate
 ```
 
-### 6d) Buat symbolic link storage
+### 7d) Buat symbolic link storage
 
 ```bash
-cd ~/public_html
+cd ~/scan
 php artisan storage:link
 ```
 
-### 6e) Set permission folder
+### 7e) Set permission folder
 
 ```bash
-cd ~/public_html
+cd ~/scan
 chmod -R 775 storage bootstrap/cache
 ```
 
-### 6f) Jalankan migrasi + seeder (jika ada)
+### 7f) Jalankan migrasi + seeder (jika ada)
 
 ```bash
-cd ~/public_html
+cd ~/scan
 php artisan migrate --force
 php artisan db:seed --force   # opsional, jika ada seeder
 ```
 
-### 6g) Build cache Laravel
+### 7g) Build cache Laravel
 
 ```bash
+cd ~/scan
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -271,7 +276,7 @@ php artisan view:cache
 
 ---
 
-## 7) Update & Deploy Berikutnya
+## 8) Update & Deploy Berikutnya
 
 Setiap kali ada perubahan kode:
 
@@ -294,24 +299,13 @@ git push origin main
 4. Klik **Update from Remote**
 5. Klik **Deploy HEAD Commit**
 
-> **Tips:** Kamu juga bisa melakukan pull & deploy via Terminal cPanel:
+> **Tips:** Kamu juga bisa pull & deploy via Terminal cPanel:
 >
 > ```bash
 > cd ~/scan
 > git pull origin main
-> ```
-> 
-> Kemudian deploy via cPanel UI, atau jalankan manual:
 >
-> ```bash
-> # Berpindah ke folder deploy
-> cd ~/public_html
->
-> # Sync file
-> rsync -a --delete --exclude='.git' --exclude='node_modules' --exclude='.env' \
->   ~/scan/ ~/public_html/
->
-> # Install deps & cache
+> # Lalu jalankan manual:
 > composer install --no-dev --optimize-autoloader --no-interaction
 > php artisan migrate --force
 > php artisan optimize:clear
@@ -322,7 +316,7 @@ git push origin main
 
 ---
 
-## 8) Troubleshooting
+## 9) Troubleshooting
 
 ### Deploy gagal: "repository path already exists"
 - Hapus folder repository yang sudah ada via **File Manager** cPanel
@@ -343,13 +337,14 @@ cd ~
 php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
 php composer-setup.php
 php -r "unlink('composer-setup.php');"
+mkdir -p ~/bin
 mv composer.phar ~/bin/composer
 chmod +x ~/bin/composer
 ```
 
 Lalu ubah path di `.cpanel.yml`:
 ```yaml
-- cd $DEPLOYPATH && ~/bin/composer install --no-dev --optimize-autoloader --no-interaction 2>&1
+- cd $PROJECTPATH && ~/bin/composer install --no-dev --optimize-autoloader --no-interaction 2>&1
 ```
 
 ### Error "PHP artisan" command not found
@@ -363,26 +358,26 @@ ls /opt/cpanel/ea-php*/root/usr/bin/php
 
 Gunakan path lengkap, contoh:
 ```yaml
-- cd $DEPLOYPATH && /usr/local/bin/ea-php82 artisan migrate --force 2>&1
+- cd $PROJECTPATH && /usr/local/bin/ea-php82 artisan migrate --force 2>&1
 ```
 
 ### Halaman web error 500 setelah deploy
 1. Cek file `.env` sudah benar
 2. Cek `APP_KEY` sudah di-generate
 3. Cek permission folder `storage` dan `bootstrap/cache`
-4. Cek log error: `cat ~/public_html/storage/logs/laravel.log | tail -50`
+4. Cek log error: `cat ~/scan/storage/logs/laravel.log | tail -50`
 
 ### Halaman web 403 Forbidden
-- Pastikan `public/index.php` ada di root `public_html`
-- Jika menggunakan subdomain, pastikan **Document Root** mengarah ke folder yang benar
+- Pastikan Document Root subdomain mengarah ke `/home/USERNAME/scan/public`
+- Pastikan `public/index.php` ada
 
-### File `.env` tertimpa saat deploy
-- Pastikan `.env` sudah ada di daftar `--exclude` pada perintah `rsync` di `.cpanel.yml`
-- `.env` sudah ada di `.gitignore`, jadi tidak akan ikut ter-push
+### File `.env` hilang setelah deploy
+- `.env` ada di `.gitignore` jadi tidak ikut ter-push/pull — ini aman
+- Jika hilang, kemungkinan terhapus manual. Buat ulang dari `.env.example`
 
 ### Perubahan tidak muncul setelah deploy
 ```bash
-cd ~/public_html
+cd ~/scan
 php artisan optimize:clear
 php artisan config:cache
 ```
@@ -391,69 +386,41 @@ Atau clear cache browser (Ctrl+Shift+R).
 
 ---
 
-## 9) Tips & Best Practices
+## 10) Tips & Best Practices
 
 ### ✅ Yang HARUS dilakukan:
 - Selalu test di lokal sebelum push
 - Backup database sebelum deploy yang ada migration besar
 - Pastikan `.env` tidak ikut ter-push ke GitHub (sudah ada di `.gitignore`)
 - Gunakan `--force` untuk `artisan migrate` di production
-- Monitor log Laravel setelah deploy: `tail -f storage/logs/laravel.log`
+- Monitor log Laravel setelah deploy: `tail -f ~/scan/storage/logs/laravel.log`
 
 ### ❌ Yang JANGAN dilakukan:
-- Jangan clone langsung ke `public_html` (gunakan folder terpisah + rsync)
 - Jangan edit kode langsung di server — selalu edit di lokal, push, lalu deploy
 - Jangan simpan kredensial (password, token) di kode — gunakan `.env`
 - Jangan set `APP_DEBUG=true` di production
+- Jangan biarkan Document Root mengarah ke `/scan` saja (harus `/scan/public`)
 
-### 🔄 Struktur folder yang direkomendasikan:
+### 🔄 Struktur folder di server:
 
 ```
 /home/USERNAME/
-├── public_html/             ← Folder web utama (hasil deploy)
-│   ├── app/
-│   ├── bootstrap/
-│   ├── config/
-│   ├── database/
-│   ├── public/              ← Document root web
-│   │   ├── index.php
-│   │   └── ...
-│   ├── resources/
-│   ├── routes/
-│   ├── storage/
-│   ├── vendor/
-│   ├── .env                 ← File environment (TIDAK dari git)
-│   ├── artisan
-│   └── composer.json
-│
-└── scan/                    ← Clone dari GitHub (repo cPanel)
+└── scan/                    ← Repo Git + folder web (subdomain)
     ├── app/
-    ├── .cpanel.yml
-    ├── composer.json
-    └── ...
-```
-
-### 📌 Catatan tentang Document Root:
-
-Secara default, cPanel mengarahkan domain ke `/home/USERNAME/public_html/`.  
-Namun Laravel membutuhkan **Document Root** mengarah ke folder `public/` di dalam project.
-
-**Solusi pilihan:**
-
-**Opsi A — Ubah Document Root di cPanel (Rekomendasi):**
-1. Buka cPanel → **Domains** atau **Subdomains**
-2. Edit domain kamu
-3. Ubah **Document Root** menjadi: `/home/USERNAME/public_html/public`
-
-**Opsi B — Gunakan `.htaccess` di root `public_html`:**
-
-Jika tidak bisa ubah Document Root, buat file `.htaccess` di `public_html/`:
-
-```apache
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^(.*)$ public/$1 [L]
-</IfModule>
+    ├── bootstrap/
+    ├── config/
+    ├── database/
+    ├── public/              ← Document Root subdomain (harus ke sini!)
+    │   ├── index.php
+    │   └── ...
+    ├── resources/
+    ├── routes/
+    ├── storage/
+    ├── vendor/              ← Diinstall oleh composer (tidak dari git)
+    ├── .cpanel.yml          ← Konfigurasi deploy
+    ├── .env                 ← File environment (TIDAK dari git)
+    ├── artisan
+    └── composer.json
 ```
 
 ---
@@ -469,15 +436,13 @@ Jika tidak bisa ubah Document Root, buat file `.htaccess` di `public_html/`:
                                         ▼
                               ┌──────────────────┐
                               │  cPanel Git Repo  │
-                              │     ~/scan/        │
-                              └────────┬─────────┘
-                                       │
-                                       │ Deploy (.cpanel.yml)
-                                       │ rsync + composer + artisan
-                                       ▼
-                              ┌──────────────────┐
-                              │   public_html/    │
-                              │   (Live Website)  │
+                              │     ~/scan/       │
+                              │                   │
+                              │  composer install  │
+                              │  artisan migrate   │
+                              │  artisan cache     │
+                              │                   │
+                              │  = Live Website   │
                               └──────────────────┘
 ```
 
