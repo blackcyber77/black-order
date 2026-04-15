@@ -9,7 +9,7 @@ deployment:
 
     # 1) Set path
     - export DEPLOYPATH=/home/USERNAME/public_html
-    - export REPOPATH=/home/USERNAME/repositories/black-order
+    - export REPOPATH=/home/USERNAME/scan
 
     # 2) Sync semua file ke folder deploy (exclude file sensitif & cache)
     - /bin/rsync -a --delete

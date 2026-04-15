@@ -84,14 +84,14 @@ https://github.com/blackcyber77/black-order.git
    | Field                    | Nilai                                                  |
    | ------------------------ | ------------------------------------------------------ |
    | **Clone URL**            | `https://github.com/blackcyber77/black-order.git`      |
-   | **Repository Path**      | `/home/USERNAME/repositories/black-order`               |
+   | **Repository Path**      | `/home/USERNAME/scan`                                  |
    | **Repository Name**      | `black-order`                                          |
 
    > **PENTING tentang Repository Path:**
    >
    > - Ganti `USERNAME` dengan username cPanel kamu (bisa dilihat di sidebar kiri cPanel)
    > - **JANGAN** clone langsung ke `public_html`! Clone ke folder terpisah
-   > - Contoh path: `/home/username/repositories/black-order`
+   > - Pada project ini, repo di-clone ke `/home/USERNAME/scan`
    > - Nanti kita akan copy/deploy file-file yang dibutuhkan ke `public_html` menggunakan `.cpanel.yml`
 
 4. Klik **Create**
@@ -121,7 +121,7 @@ deployment:
   tasks:
     # 1) Copy semua file project ke public_html (kecuali folder public)
     - export DEPLOYPATH=/home/USERNAME/public_html
-    - export REPOPATH=/home/USERNAME/repositories/black-order
+    - export REPOPATH=/home/USERNAME/scan
 
     # 2) Sync file project (exclude folder public Laravel)
     - /bin/rsync -a --delete --exclude='.git'
@@ -297,7 +297,7 @@ git push origin main
 > **Tips:** Kamu juga bisa melakukan pull & deploy via Terminal cPanel:
 >
 > ```bash
-> cd ~/repositories/black-order
+> cd ~/scan
 > git pull origin main
 > ```
 > 
@@ -309,7 +309,7 @@ git push origin main
 >
 > # Sync file
 > rsync -a --delete --exclude='.git' --exclude='node_modules' --exclude='.env' \
->   ~/repositories/black-order/ ~/public_html/
+>   ~/scan/ ~/public_html/
 >
 > # Install deps & cache
 > composer install --no-dev --optimize-autoloader --no-interaction
@@ -426,12 +426,11 @@ Atau clear cache browser (Ctrl+Shift+R).
 │   ├── artisan
 │   └── composer.json
 │
-└── repositories/
-    └── black-order/         ← Clone dari GitHub (bare repo cPanel)
-        ├── app/
-        ├── .cpanel.yml
-        ├── composer.json
-        └── ...
+└── scan/                    ← Clone dari GitHub (repo cPanel)
+    ├── app/
+    ├── .cpanel.yml
+    ├── composer.json
+    └── ...
 ```
 
 ### 📌 Catatan tentang Document Root:
@@ -470,7 +469,7 @@ Jika tidak bisa ubah Document Root, buat file `.htaccess` di `public_html/`:
                                         ▼
                               ┌──────────────────┐
                               │  cPanel Git Repo  │
-                              │  ~/repositories/  │
+                              │     ~/scan/        │
                               └────────┬─────────┘
                                        │
                                        │ Deploy (.cpanel.yml)
