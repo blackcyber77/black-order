@@ -5,10 +5,51 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\MenuItem;
 use App\Models\Order;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    public function qrNotifications(Request $request)
+    {
+        $query = Order::query()
+            ->whereNull('cashier_id')
+            ->where('payment_method', Order::PAYMENT_QRIS)
+            ->latest('created_at')
+            ->latest('id');
+
+        if ($request->filled('since')) {
+            try {
+                $since = Carbon::parse($request->query('since'));
+                $query->where('created_at', '>', $since);
+            } catch (\Throwable $e) {
+                // Ignore invalid timestamp and return the latest snapshot.
+            }
+        }
+
+        $orders = $query->take(5)->get();
+        $latestCreatedAt = null;
+        $latestOrderTime = $orders->max('created_at');
+        if ($latestOrderTime) {
+            $latestCreatedAt = $latestOrderTime->toISOString();
+        }
+
+        return response()->json([
+            'orders' => $orders->map(function (Order $order) {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'customer_name' => $order->customer_name,
+                    'table_number' => $order->table_number,
+                    'status_label' => $order->status_label,
+                    'formatted_total' => $order->formatted_total,
+                    'created_at_label' => $order->created_at->format('H:i'),
+                ];
+            })->values(),
+            'latest_created_at' => $latestCreatedAt,
+        ]);
+    }
+
     public function report(Request $request)
     {
         $source = $request->input('source', 'all');

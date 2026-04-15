@@ -68,6 +68,19 @@
             padding-left: 0;
             padding-right: 0;
         }
+        .qr-notification-enter {
+            animation: qrNotifSlideIn 0.35s ease-out;
+        }
+        @keyframes qrNotifSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans antialiased text-slate-800">
@@ -99,9 +112,6 @@
                 </a>
                 <a href="{{ route('admin.menus.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.menus.*') ? 'active bg-white/5 text-white' : '' }}">
                     <i class="fas fa-utensils mr-3 opacity-70"></i><span class="sidebar-label">Menu POS</span>
-                </a>
-                <a href="{{ route('admin.menus.availability') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.menus.availability') ? 'active bg-white/5 text-white' : '' }}">
-                    <i class="fas fa-toggle-on mr-3 opacity-70"></i><span class="sidebar-label">Ketersediaan QR</span>
                 </a>
                 <a href="{{ route('admin.towers.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.towers.*') ? 'active bg-white/5 text-white' : '' }}">
                     <i class="fas fa-chair mr-3 opacity-70"></i><span class="sidebar-label">Meja</span>
@@ -222,6 +232,132 @@
                     document.body.classList.toggle('sidebar-collapsed');
                 });
             }
+
+            const notificationsUrl = @json(route('admin.orders.qr-notifications'));
+            const orderDetailBaseUrl = @json(url('/admin/orders'));
+            const pollIntervalMs = 10000;
+            const sinceStorageKey = 'admin_qr_notif_since';
+            const notifiedIdsStorageKey = 'admin_qr_notified_ids';
+
+            const notifContainer = document.createElement('div');
+            notifContainer.className = 'fixed top-24 right-4 md:right-8 z-50 space-y-3 w-[92vw] max-w-sm pointer-events-none';
+            document.body.appendChild(notifContainer);
+
+            let lastSince = localStorage.getItem(sinceStorageKey);
+            if (!lastSince) {
+                lastSince = new Date().toISOString();
+                localStorage.setItem(sinceStorageKey, lastSince);
+            }
+
+            const savedIds = sessionStorage.getItem(notifiedIdsStorageKey);
+            const notifiedIds = new Set(savedIds ? JSON.parse(savedIds) : []);
+
+            function persistNotifiedIds() {
+                const ids = Array.from(notifiedIds).slice(-200);
+                sessionStorage.setItem(notifiedIdsStorageKey, JSON.stringify(ids));
+            }
+
+            function playNotificationSound() {
+                try {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContextClass) return;
+
+                    const ctx = new AudioContextClass();
+                    const oscillator = ctx.createOscillator();
+                    const gainNode = ctx.createGain();
+
+                    oscillator.type = 'triangle';
+                    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+                    gainNode.gain.setValueAtTime(0.0001, ctx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+                    gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(ctx.destination);
+
+                    oscillator.start();
+                    oscillator.stop(ctx.currentTime + 0.26);
+                } catch (error) {
+                    // Audio may be blocked by browser policies.
+                }
+            }
+
+            function createNotificationCard(order) {
+                const card = document.createElement('div');
+                card.className = 'pointer-events-auto qr-notification-enter rounded-2xl border border-blue-100 shadow-xl bg-white overflow-hidden';
+                card.innerHTML = `
+                    <div class="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-4 py-2 text-xs font-semibold tracking-wide uppercase">
+                        Pesanan Baru QR
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-bold text-slate-900 text-sm">${order.order_number}</p>
+                                <p class="text-xs text-slate-500 mt-0.5">${order.created_at_label} • Meja ${order.table_number || '-'}</p>
+                            </div>
+                            <button class="text-slate-300 hover:text-slate-500 transition text-sm" aria-label="Tutup notifikasi">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <p class="text-sm text-slate-700 mt-2">${order.customer_name || 'Pelanggan'}</p>
+                        <div class="flex items-center justify-between mt-3">
+                            <span class="text-sm font-semibold text-green-600">${order.formatted_total}</span>
+                            <a href="${orderDetailBaseUrl}/${order.id}" class="text-xs px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-700 transition">
+                                Lihat Detail
+                            </a>
+                        </div>
+                    </div>
+                `;
+
+                const closeButton = card.querySelector('button');
+                closeButton.addEventListener('click', () => {
+                    card.remove();
+                });
+
+                setTimeout(() => {
+                    card.remove();
+                }, 12000);
+
+                return card;
+            }
+
+            async function fetchQrNotifications() {
+                try {
+                    const url = `${notificationsUrl}?since=${encodeURIComponent(lastSince)}`;
+                    const response = await fetch(url, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) return;
+                    const payload = await response.json();
+                    const orders = Array.isArray(payload.orders) ? payload.orders : [];
+
+                    const newOrders = orders.filter((order) => !notifiedIds.has(order.id));
+                    if (newOrders.length > 0) {
+                        playNotificationSound();
+                    }
+
+                    newOrders.reverse().forEach((order) => {
+                        notifiedIds.add(order.id);
+                        notifContainer.appendChild(createNotificationCard(order));
+                    });
+
+                    if (payload.latest_created_at) {
+                        lastSince = payload.latest_created_at;
+                        localStorage.setItem(sinceStorageKey, lastSince);
+                    }
+
+                    persistNotifiedIds();
+                } catch (error) {
+                    // Ignore polling errors; next tick will retry.
+                }
+            }
+
+            fetchQrNotifications();
+            setInterval(fetchQrNotifications, pollIntervalMs);
         });
     </script>
 </body>

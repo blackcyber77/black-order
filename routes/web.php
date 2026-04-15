@@ -88,12 +88,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     // Menu Management (POS + QR Availability)
     Route::resource('menus', MenuItemController::class)->except(['show']);
-    Route::get('/menus-availability', [MenuItemController::class, 'availability'])->name('menus.availability');
     Route::patch('/menus/{menu}/availability', [MenuItemController::class, 'toggleAvailability'])->name('menus.toggle-availability');
     
     // Orders
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/report', [AdminOrderController::class, 'report'])->name('orders.report');
+    Route::get('/orders/notifications/qr', [AdminOrderController::class, 'qrNotifications'])->name('orders.qr-notifications');
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}/verify', [AdminOrderController::class, 'verifyPayment'])->name('orders.verify');
     Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status');

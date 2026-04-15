@@ -109,28 +109,6 @@ class MenuItemController extends Controller
         return redirect()->route('admin.menus.index')->with('success', 'Menu berhasil dihapus');
     }
 
-    public function availability(Request $request)
-    {
-        $query = MenuItem::with('category')->orderBy('name');
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
-
-        $menus = $query->paginate(30);
-        $categories = Category::ordered()->get();
-
-        return view('admin.menus.availability', compact('menus', 'categories'));
-    }
-
     public function toggleAvailability(MenuItem $menu)
     {
         $menu->update([
@@ -144,4 +122,3 @@ class MenuItemController extends Controller
         return back()->with('success', $message);
     }
 }
-

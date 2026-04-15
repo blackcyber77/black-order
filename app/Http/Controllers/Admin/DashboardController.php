@@ -23,11 +23,15 @@ class DashboardController extends Controller
             ->sum('total');
 
         $recentOrders = Order::query()
+            ->with(['cashier'])
             ->latest()
             ->take(10)
             ->get();
 
         $totalMenuItems = MenuItem::count();
+        $totalOrders = Order::count();
+        $walkInOrders = Order::whereNotNull('cashier_id')->count();
+        $qrOrders = Order::whereNull('cashier_id')->count();
 
         return view('admin.dashboard', compact(
             'todayOrders',
@@ -35,7 +39,10 @@ class DashboardController extends Controller
             'pendingOrders',
             'monthlyRevenue',
             'recentOrders',
-            'totalMenuItems'
+            'totalMenuItems',
+            'totalOrders',
+            'walkInOrders',
+            'qrOrders'
         ));
     }
 }
