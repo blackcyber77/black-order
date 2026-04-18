@@ -5,23 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title') - Kantin Industri Batang</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Source+Serif+4:wght@500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Outfit', 'sans-serif'],
+                        sans: ['Manrope', 'Arial', 'sans-serif'],
+                        serif: ['Source Serif 4', 'Georgia', 'serif'],
                     },
                     colors: {
+                        parchment: '#F5F4ED',
+                        ivory: '#FAF9F5',
                         navy: {
-                            800: '#1E293B',
-                            900: '#0F172A',
+                            800: '#30302E',
+                            900: '#141413',
                         },
                         orange: {
-                            500: '#F97316',
-                            600: '#EA580C',
+                            500: '#C96442',
+                            600: '#B85A3D',
                         }
                     },
                     animation: {
@@ -39,10 +42,20 @@
     </script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
+        :root {
+            --paper: #f5f4ed;
+            --ivory: #faf9f5;
+            --near-black: #141413;
+            --terracotta: #c96442;
+            --terracotta-dark: #b85a3d;
+            --border-cream: #f0eee6;
+            --border-warm: #e8e6dc;
+            --text-secondary: #5e5d59;
+        }
         .glass-nav {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(245, 244, 237, 0.95);
             backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            border-bottom: 1px solid var(--border-warm);
         }
         .hide-scrollbar::-webkit-scrollbar {
             display: none;
@@ -51,9 +64,38 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+        body {
+            background: var(--paper);
+            color: var(--near-black);
+        }
+        h1, h2, h3, .font-bold {
+            font-family: "Source Serif 4", Georgia, serif;
+        }
+        .bg-white {
+            background: var(--ivory) !important;
+            border-color: var(--border-cream) !important;
+        }
+        .text-slate-500, .text-slate-600, .text-gray-500, .text-gray-600 {
+            color: var(--text-secondary) !important;
+        }
+        .bg-orange-500, .bg-orange-600 {
+            background-color: var(--terracotta) !important;
+        }
+        .hover\:bg-orange-600:hover, .hover\:bg-orange-700:hover {
+            background-color: var(--terracotta-dark) !important;
+        }
+        .text-orange-600, .text-orange {
+            color: var(--terracotta) !important;
+        }
+        .border, .border-gray-100, .border-gray-200, .border-slate-100, .border-slate-200 {
+            border-color: var(--border-cream) !important;
+        }
+        .bg-slate-100, .bg-gray-100, .bg-gray-50 {
+            background: #f0eee6 !important;
+        }
     </style>
 </head>
-<body class="bg-gray-50 font-sans text-slate-800 pb-20 md:pb-0">
+<body class="font-sans pb-20 md:pb-0">
 
     <!-- Modern Header -->
     <header class="fixed w-full top-0 z-50 glass-nav transition-all duration-300" id="main-header">
@@ -61,7 +103,7 @@
             <div class="flex justify-between items-center h-20">
                 <!-- Logo -->
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
+                    <div class="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg">
                         <i class="fas fa-utensils text-lg"></i>
                     </div>
                     <div>

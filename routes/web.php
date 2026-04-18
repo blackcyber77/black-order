@@ -8,7 +8,6 @@ use App\Http\Controllers\Customer\OrderController;
 use App\Http\Controllers\Customer\PaymentController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
-use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\TowerController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\MenuItemController;
@@ -73,16 +72,6 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     
-    // POS
-    Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
-    Route::get('/pos/create', [PosController::class, 'create'])->name('pos.create');
-    Route::post('/pos', [PosController::class, 'store'])->name('pos.store');
-    Route::patch('/pos/{order}/pay', [PosController::class, 'markAsPaid'])->name('pos.pay');
-    Route::patch('/pos/{order}/hold', [PosController::class, 'hold'])->name('pos.hold');
-    Route::patch('/pos/{order}/recall', [PosController::class, 'recall'])->name('pos.recall');
-    Route::patch('/pos/{order}/void', [PosController::class, 'void'])->name('pos.void');
-    Route::get('/pos/{order}/receipt', [PosController::class, 'receipt'])->name('pos.receipt');
-    
     // Categories
     Route::resource('categories', CategoryController::class);
 
@@ -94,6 +83,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/report', [AdminOrderController::class, 'report'])->name('orders.report');
     Route::get('/orders/notifications/qr', [AdminOrderController::class, 'qrNotifications'])->name('orders.qr-notifications');
+    Route::get('/orders/{order}/thermal-print', [AdminOrderController::class, 'thermalPrint'])->name('orders.thermal-print');
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}/verify', [AdminOrderController::class, 'verifyPayment'])->name('orders.verify');
     Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status');

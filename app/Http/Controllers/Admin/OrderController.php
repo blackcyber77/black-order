@@ -44,6 +44,7 @@ class OrderController extends Controller
                     'status_label' => $order->status_label,
                     'formatted_total' => $order->formatted_total,
                     'created_at_label' => $order->created_at->format('H:i'),
+                    'thermal_print_url' => route('admin.orders.thermal-print', $order),
                 ];
             })->values(),
             'latest_created_at' => $latestCreatedAt,
@@ -112,6 +113,12 @@ class OrderController extends Controller
     {
         $order->load(['cashier', 'items.menuItem', 'transaction']);
         return view('admin.orders.show', compact('order'));
+    }
+
+    public function thermalPrint(Order $order)
+    {
+        $order->load(['items.menuItem']);
+        return view('admin.orders.thermal', compact('order'));
     }
 
     /**

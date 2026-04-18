@@ -5,23 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title') - Admin Kantin</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Source+Serif+4:wght@500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Outfit', 'sans-serif'],
+                        sans: ['Manrope', 'Arial', 'sans-serif'],
+                        serif: ['Source Serif 4', 'Georgia', 'serif'],
                     },
                     colors: {
+                        parchment: '#F5F4ED',
+                        ivory: '#FAF9F5',
+                        warm: {
+                            100: '#F0EEE6',
+                            200: '#E8E6DC',
+                            400: '#B0AEA5',
+                            500: '#87867F',
+                            700: '#5E5D59',
+                        },
                         navy: {
-                            800: '#1E293B',
-                            900: '#0F172A',
+                            800: '#30302E',
+                            900: '#141413',
                         },
                         orange: {
-                            500: '#F97316',
-                            600: '#EA580C',
+                            500: '#C96442',
+                            600: '#B85A3D',
                         }
                     }
                 }
@@ -29,18 +39,30 @@
         }
     </script>
     <style>
+        :root {
+            --paper: #f5f4ed;
+            --ivory: #faf9f5;
+            --near-black: #141413;
+            --dark-surface: #30302e;
+            --terracotta: #c96442;
+            --terracotta-dark: #b85a3d;
+            --border-cream: #f0eee6;
+            --border-warm: #e8e6dc;
+            --text-secondary: #5e5d59;
+            --text-muted: #87867f;
+        }
         .glass {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(245, 244, 237, 0.92);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            border-bottom: 1px solid var(--border-warm);
         }
         .sidebar-link {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .sidebar-link:hover, .sidebar-link.active {
-            background: rgba(255, 255, 255, 0.1);
-            border-left: 4px solid #F97316;
+            background: rgba(201, 100, 66, 0.12);
+            border-left: 4px solid var(--terracotta);
             padding-left: 1rem;
         }
         .sidebar-link i {
@@ -81,15 +103,81 @@
                 transform: translateY(0) scale(1);
             }
         }
+        body {
+            background: var(--paper);
+            color: var(--near-black);
+        }
+        h1, h2, h3, .font-bold.text-navy-800, .font-bold.text-navy-900 {
+            font-family: "Source Serif 4", Georgia, serif;
+            letter-spacing: 0;
+        }
+        main .bg-white {
+            background: var(--ivory) !important;
+            border: 1px solid var(--border-cream);
+        }
+        main .text-gray-500,
+        main .text-slate-500,
+        main .text-gray-600,
+        main .text-slate-600 {
+            color: var(--text-secondary) !important;
+        }
+        main .border,
+        main .border-gray-100,
+        main .border-gray-200,
+        main .divide-y > * + * {
+            border-color: var(--border-cream) !important;
+        }
+        main .bg-gray-50,
+        main .bg-slate-50 {
+            background: #f0eee6 !important;
+        }
+        main .shadow,
+        main .shadow-sm,
+        main .shadow-lg,
+        main .shadow-xl {
+            box-shadow: rgba(20, 20, 19, 0.05) 0 4px 24px !important;
+        }
+        button,
+        .btn,
+        input,
+        select,
+        textarea {
+            border-radius: 12px;
+        }
+        input,
+        select,
+        textarea {
+            border-color: var(--border-warm) !important;
+            background: #fffdf8;
+        }
+        .bg-orange-600,
+        .bg-orange-500 {
+            background-color: var(--terracotta) !important;
+        }
+        .hover\:bg-orange-700:hover,
+        .hover\:bg-orange-600:hover,
+        .hover\:bg-orange-500:hover {
+            background-color: var(--terracotta-dark) !important;
+        }
+        .text-orange-600,
+        .text-orange {
+            color: var(--terracotta) !important;
+        }
+        .bg-navy-900 {
+            background-color: var(--near-black) !important;
+        }
+        .bg-navy-800 {
+            background-color: var(--dark-surface) !important;
+        }
     </style>
 </head>
-<body class="bg-gray-50 font-sans antialiased text-slate-800">
+<body class="font-sans antialiased">
     <div class="flex h-screen overflow-hidden">
         <!-- Modern Sidebar -->
-        <aside class="w-64 bg-navy-900 text-white flex-shrink-0 hidden md:flex flex-col transition-all duration-300 shadow-xl z-20">
+        <aside class="w-64 bg-navy-900 text-[#b0aea5] flex-shrink-0 hidden md:flex flex-col transition-all duration-300 shadow-xl z-20">
             <div class="h-20 flex items-center px-8 border-b border-white/10">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-6 transition">
+                    <div class="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-6 transition">
                         <i class="fas fa-utensils text-white text-lg"></i>
                     </div>
                     <div class="brand-text">
@@ -111,17 +199,14 @@
                     <i class="fas fa-tag mr-3 opacity-70"></i><span class="sidebar-label">Kategori</span>
                 </a>
                 <a href="{{ route('admin.menus.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.menus.*') ? 'active bg-white/5 text-white' : '' }}">
-                    <i class="fas fa-utensils mr-3 opacity-70"></i><span class="sidebar-label">Menu POS</span>
+                    <i class="fas fa-utensils mr-3 opacity-70"></i><span class="sidebar-label">Manajemen Menu</span>
                 </a>
                 <a href="{{ route('admin.towers.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.towers.*') ? 'active bg-white/5 text-white' : '' }}">
                     <i class="fas fa-chair mr-3 opacity-70"></i><span class="sidebar-label">Meja</span>
                 </a>
 
                 <p class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-6 mb-2 sidebar-section-label">Transaksi</p>
-                <a href="{{ route('admin.pos.create') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.pos.create') ? 'active bg-white/5 text-white' : '' }}">
-                    <i class="fas fa-cash-register mr-3 opacity-70 text-green-400"></i><span class="sidebar-label">POS Kasir (Input)</span>
-                </a>
-                <a href="{{ route('admin.orders.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.orders.*') && !request()->routeIs('admin.orders.report') && !request()->routeIs('admin.pos.*') ? 'active bg-white/5 text-white' : '' }}">
+                <a href="{{ route('admin.orders.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.orders.*') && !request()->routeIs('admin.orders.report') ? 'active bg-white/5 text-white' : '' }}">
                     <i class="fas fa-shopping-cart mr-3 opacity-70"></i><span class="sidebar-label">Pesanan</span>
                 </a>
                 <a href="{{ route('admin.orders.report') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.orders.report') ? 'active bg-white/5 text-white' : '' }}">
@@ -235,6 +320,7 @@
 
             const notificationsUrl = @json(route('admin.orders.qr-notifications'));
             const orderDetailBaseUrl = @json(url('/admin/orders'));
+            const thermalPrintStorageKey = 'admin_qr_auto_thermal_print';
             const pollIntervalMs = 10000;
             const sinceStorageKey = 'admin_qr_notif_since';
             const notifiedIdsStorageKey = 'admin_qr_notified_ids';
@@ -251,6 +337,7 @@
 
             const savedIds = sessionStorage.getItem(notifiedIdsStorageKey);
             const notifiedIds = new Set(savedIds ? JSON.parse(savedIds) : []);
+            const autoThermalPrintEnabled = localStorage.getItem(thermalPrintStorageKey) !== '0';
 
             function persistNotifiedIds() {
                 const ids = Array.from(notifiedIds).slice(-200);
@@ -302,9 +389,14 @@
                         <p class="text-sm text-slate-700 mt-2">${order.customer_name || 'Pelanggan'}</p>
                         <div class="flex items-center justify-between mt-3">
                             <span class="text-sm font-semibold text-green-600">${order.formatted_total}</span>
-                            <a href="${orderDetailBaseUrl}/${order.id}" class="text-xs px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-700 transition">
-                                Lihat Detail
-                            </a>
+                            <div class="flex items-center gap-2">
+                                <a href="${order.thermal_print_url}?autoprint=1" target="_blank" class="text-xs px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
+                                    Print
+                                </a>
+                                <a href="${orderDetailBaseUrl}/${order.id}" class="text-xs px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-700 transition">
+                                    Lihat Detail
+                                </a>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -319,6 +411,23 @@
                 }, 12000);
 
                 return card;
+            }
+
+            function triggerThermalAutoPrint(order) {
+                if (!autoThermalPrintEnabled || !order.thermal_print_url) return;
+
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'fixed';
+                iframe.style.width = '1px';
+                iframe.style.height = '1px';
+                iframe.style.opacity = '0';
+                iframe.style.pointerEvents = 'none';
+                iframe.style.bottom = '0';
+                iframe.style.right = '0';
+                iframe.src = `${order.thermal_print_url}?autoprint=1`;
+
+                document.body.appendChild(iframe);
+                setTimeout(() => iframe.remove(), 45000);
             }
 
             async function fetchQrNotifications() {
@@ -342,6 +451,7 @@
 
                     newOrders.reverse().forEach((order) => {
                         notifiedIds.add(order.id);
+                        triggerThermalAutoPrint(order);
                         notifContainer.appendChild(createNotificationCard(order));
                     });
 

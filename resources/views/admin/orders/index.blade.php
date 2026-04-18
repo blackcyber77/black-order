@@ -92,6 +92,7 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <a href="{{ route('admin.orders.show', $order) }}" class="text-navy hover:underline">Detail</a>
+                    <a href="{{ route('admin.orders.thermal-print', ['order' => $order->id, 'autoprint' => 1]) }}" target="_blank" class="text-blue-600 hover:underline ml-3">Print</a>
                 </td>
             </tr>
             @empty

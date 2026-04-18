@@ -142,6 +142,10 @@
     <div class="bg-white rounded-xl shadow p-6 mb-6">
         <h3 class="font-semibold text-navy mb-4">Aksi</h3>
         <div class="flex flex-wrap gap-3">
+            <a href="{{ route('admin.orders.thermal-print', ['order' => $order->id, 'autoprint' => 1]) }}" target="_blank" class="px-4 py-2 bg-navy-900 text-white rounded-lg text-sm font-semibold hover:bg-navy-800 transition">
+                <i class="fas fa-print mr-1"></i> Print Nota Thermal
+            </a>
+
             {{-- Verify Payment --}}
             @if($order->isCashless() && $order->payment_status !== 'verified')
             <form action="{{ route('admin.orders.verify', $order) }}" method="POST">
