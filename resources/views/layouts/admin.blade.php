@@ -177,6 +177,11 @@
         .bg-navy-800 {
             background-color: var(--dark-surface) !important;
         }
+        #printer-toggle-btn.connected {
+            border-color: #2e7d32;
+            color: #2e7d32;
+            background: #eef8ef;
+        }
         @media (max-width: 767px) {
             header.glass {
                 height: 4rem;
@@ -287,6 +292,9 @@
                 </div>
                 
                 <div class="flex items-center gap-4">
+                    <button id="printer-toggle-btn" type="button" class="w-10 h-10 rounded-full bg-white border border-[var(--border-warm)] text-[var(--text-secondary)] hover:text-[var(--near-black)] hover:border-[var(--terracotta)] transition" title="Hubungkan printer thermal">
+                        <i id="printer-toggle-icon" class="fas fa-print text-sm"></i>
+                    </button>
                     <div class="flex flex-col text-right hidden sm:block">
                         <span class="text-sm font-semibold text-navy-800">{{ auth()->user()->name }}</span>
                         <span class="text-xs text-slate-500">Administrator</span>
@@ -369,9 +377,11 @@
             const notificationsUrl = @json(route('admin.orders.qr-notifications'));
             const orderDetailBaseUrl = @json(url('/admin/orders'));
             const thermalPrintStorageKey = 'admin_qr_auto_thermal_print';
-            const pollIntervalMs = 10000;
+            const pollIntervalMs = 3000;
             const sinceStorageKey = 'admin_qr_notif_since';
             const notifiedIdsStorageKey = 'admin_qr_notified_ids';
+            const audioUnlockedStorageKey = 'admin_qr_audio_unlocked';
+            const printerConnectedStorageKey = 'admin_bt_printer_connected';
 
             const notifContainer = document.createElement('div');
             notifContainer.className = 'fixed top-24 right-4 md:right-8 z-50 space-y-3 w-[92vw] max-w-sm pointer-events-none';
@@ -379,25 +389,175 @@
 
             let lastSince = localStorage.getItem(sinceStorageKey);
             if (!lastSince) {
-                lastSince = new Date().toISOString();
+                // Read recent orders window on first load so cashier doesn't miss near-real-time orders.
+                lastSince = new Date(Date.now() - 2 * 60 * 1000).toISOString();
                 localStorage.setItem(sinceStorageKey, lastSince);
             }
 
             const savedIds = sessionStorage.getItem(notifiedIdsStorageKey);
             const notifiedIds = new Set(savedIds ? JSON.parse(savedIds) : []);
             const autoThermalPrintEnabled = localStorage.getItem(thermalPrintStorageKey) !== '0';
+            let audioContext = null;
+            let audioUnlocked = localStorage.getItem(audioUnlockedStorageKey) === '1';
+            let printerDevice = null;
+            let printerCharacteristic = null;
+            const printerToggleBtn = document.getElementById('printer-toggle-btn');
+            const printerToggleIcon = document.getElementById('printer-toggle-icon');
+            let printerConnected = localStorage.getItem(printerConnectedStorageKey) === '1';
 
             function persistNotifiedIds() {
                 const ids = Array.from(notifiedIds).slice(-200);
                 sessionStorage.setItem(notifiedIdsStorageKey, JSON.stringify(ids));
             }
 
+            function updatePrinterUi(connected) {
+                if (!printerToggleBtn || !printerToggleIcon) return;
+                printerToggleBtn.classList.toggle('connected', connected);
+                printerToggleBtn.title = connected ? 'Putuskan printer thermal' : 'Hubungkan printer thermal';
+                printerToggleIcon.className = connected ? 'fas fa-print text-sm' : 'fas fa-print text-sm';
+            }
+
+            function textToEscPos(text) {
+                const encoder = new TextEncoder();
+                const init = new Uint8Array([0x1b, 0x40]); // initialize
+                const alignLeft = new Uint8Array([0x1b, 0x61, 0x00]);
+                const body = encoder.encode(text.replace(/\n/g, '\r\n'));
+                const feedCut = new Uint8Array([0x0a, 0x0a, 0x1d, 0x56, 0x41, 0x10]); // feed + cut
+
+                const merged = new Uint8Array(init.length + alignLeft.length + body.length + feedCut.length);
+                merged.set(init, 0);
+                merged.set(alignLeft, init.length);
+                merged.set(body, init.length + alignLeft.length);
+                merged.set(feedCut, init.length + alignLeft.length + body.length);
+                return merged;
+            }
+
+            async function resolveWritableCharacteristic(device) {
+                const server = await device.gatt.connect();
+                const services = await server.getPrimaryServices();
+
+                for (const service of services) {
+                    const chars = await service.getCharacteristics();
+                    for (const ch of chars) {
+                        if (ch.properties.write || ch.properties.writeWithoutResponse) {
+                            return ch;
+                        }
+                    }
+                }
+
+                throw new Error('Karakteristik printer tidak ditemukan');
+            }
+
+            async function connectPrinter() {
+                if (!navigator.bluetooth) {
+                    alert('Browser ini belum mendukung Web Bluetooth.');
+                    return;
+                }
+
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [0xFFE0, 0xFF00, 0x180F, 0x18F0]
+                });
+
+                device.addEventListener('gattserverdisconnected', () => {
+                    printerDevice = null;
+                    printerCharacteristic = null;
+                    printerConnected = false;
+                    localStorage.setItem(printerConnectedStorageKey, '0');
+                    updatePrinterUi(false);
+                });
+
+                printerCharacteristic = await resolveWritableCharacteristic(device);
+                printerDevice = device;
+                printerConnected = true;
+                localStorage.setItem(printerConnectedStorageKey, '1');
+                updatePrinterUi(true);
+            }
+
+            async function disconnectPrinter() {
+                try {
+                    if (printerDevice?.gatt?.connected) {
+                        printerDevice.gatt.disconnect();
+                    }
+                } catch (error) {
+                    // Ignore disconnect errors.
+                }
+                printerDevice = null;
+                printerCharacteristic = null;
+                printerConnected = false;
+                localStorage.setItem(printerConnectedStorageKey, '0');
+                updatePrinterUi(false);
+            }
+
+            async function writeToPrinter(bytes) {
+                if (!printerCharacteristic) {
+                    if (!printerConnected) return;
+                    throw new Error('Printer belum terhubung');
+                }
+
+                const chunkSize = 180;
+                for (let i = 0; i < bytes.length; i += chunkSize) {
+                    const chunk = bytes.slice(i, i + chunkSize);
+                    if (printerCharacteristic.properties.writeWithoutResponse) {
+                        await printerCharacteristic.writeValueWithoutResponse(chunk);
+                    } else {
+                        await printerCharacteristic.writeValue(chunk);
+                    }
+                    await new Promise((r) => setTimeout(r, 20));
+                }
+            }
+
+            async function printThermalText(order) {
+                if (!autoThermalPrintEnabled || !printerConnected || !order.thermal_text) return;
+                try {
+                    if (!printerCharacteristic && printerDevice) {
+                        printerCharacteristic = await resolveWritableCharacteristic(printerDevice);
+                    }
+                    const bytes = textToEscPos(order.thermal_text);
+                    await writeToPrinter(bytes);
+                } catch (error) {
+                    console.warn('Gagal print thermal bluetooth:', error);
+                    // Keep showing popup even if print fails.
+                }
+            }
+
+            async function ensureNotificationPermission() {
+                if (!('Notification' in window)) return;
+                if (Notification.permission === 'default') {
+                    try {
+                        await Notification.requestPermission();
+                    } catch (error) {
+                        // Ignore; browser may reject without user gesture.
+                    }
+                }
+            }
+
+            function unlockAudio() {
+                if (audioUnlocked) return;
+                try {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) {
+                        audioContext = audioContext || new AudioContextClass();
+                        if (audioContext.state === 'suspended') {
+                            audioContext.resume();
+                        }
+                    }
+                    audioUnlocked = true;
+                    localStorage.setItem(audioUnlockedStorageKey, '1');
+                } catch (error) {
+                    // Ignore unlock failure.
+                }
+            }
+
             function playNotificationSound() {
                 try {
                     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContextClass) return;
-
-                    const ctx = new AudioContextClass();
+                    const ctx = audioContext || new AudioContextClass();
+                    audioContext = ctx;
+                    if (ctx.state === 'suspended') {
+                        ctx.resume();
+                    }
                     const oscillator = ctx.createOscillator();
                     const gainNode = ctx.createGain();
 
@@ -414,6 +574,46 @@
                     oscillator.stop(ctx.currentTime + 0.26);
                 } catch (error) {
                     // Audio may be blocked by browser policies.
+                }
+            }
+
+            async function showSystemNotification(order) {
+                if (!('Notification' in window) || Notification.permission !== 'granted') {
+                    return;
+                }
+
+                const title = `Pesanan QR Baru • ${order.order_number}`;
+                const options = {
+                    body: `${order.customer_name || 'Pelanggan'} • Meja ${order.table_number || '-'} • ${order.formatted_total}`,
+                    icon: '/icons/icon-192.png',
+                    badge: '/icons/favicon-32.png',
+                    tag: `qr-order-${order.id}`,
+                    renotify: true,
+                    data: {
+                        orderId: order.id,
+                        url: `${orderDetailBaseUrl}/${order.id}`
+                    }
+                };
+
+                try {
+                    if ('serviceWorker' in navigator) {
+                        const registration = await navigator.serviceWorker.ready;
+                        await registration.showNotification(title, options);
+                        return;
+                    }
+                } catch (error) {
+                    // Fallback to Notification API below.
+                }
+
+                try {
+                    const n = new Notification(title, options);
+                    n.onclick = function () {
+                        window.focus();
+                        window.location.href = `${orderDetailBaseUrl}/${order.id}`;
+                        n.close();
+                    };
+                } catch (error) {
+                    // Ignore unsupported environments.
                 }
             }
 
@@ -462,7 +662,7 @@
             }
 
             function triggerThermalAutoPrint(order) {
-                if (!autoThermalPrintEnabled || !order.thermal_print_url) return;
+                if (!autoThermalPrintEnabled || !order.thermal_print_url || printerConnected) return;
 
                 const iframe = document.createElement('iframe');
                 iframe.style.position = 'fixed';
@@ -482,6 +682,7 @@
                 try {
                     const url = `${notificationsUrl}?since=${encodeURIComponent(lastSince)}`;
                     const response = await fetch(url, {
+                        cache: 'no-store',
                         headers: {
                             'Accept': 'application/json',
                             'X-Requested-With': 'XMLHttpRequest'
@@ -499,8 +700,12 @@
 
                     newOrders.reverse().forEach((order) => {
                         notifiedIds.add(order.id);
+                        printThermalText(order);
                         triggerThermalAutoPrint(order);
                         notifContainer.appendChild(createNotificationCard(order));
+                        if (document.hidden || !document.hasFocus()) {
+                            showSystemNotification(order);
+                        }
                     });
 
                     if (payload.latest_created_at) {
@@ -514,8 +719,31 @@
                 }
             }
 
+            ensureNotificationPermission();
+            updatePrinterUi(printerConnected);
+            if (printerToggleBtn) {
+                printerToggleBtn.addEventListener('click', async () => {
+                    try {
+                        if (printerConnected) {
+                            await disconnectPrinter();
+                        } else {
+                            await connectPrinter();
+                        }
+                    } catch (error) {
+                        alert('Gagal menghubungkan printer. Pastikan printer thermal bluetooth menyala dan dalam mode pairing.');
+                    }
+                });
+            }
+            ['click', 'touchstart', 'keydown'].forEach((eventName) => {
+                window.addEventListener(eventName, unlockAudio, { once: true, passive: true });
+            });
             fetchQrNotifications();
             setInterval(fetchQrNotifications, pollIntervalMs);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    fetchQrNotifications();
+                }
+            });
         });
     </script>
 </body>

@@ -68,3 +68,48 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+
+self.addEventListener("push", (event) => {
+  if (!event.data) {
+    return;
+  }
+
+  let payload = {};
+  try {
+    payload = event.data.json();
+  } catch (error) {
+    payload = { title: "Pesanan Baru", body: event.data.text() };
+  }
+
+  const title = payload.title || "Pesanan QR Baru";
+  const options = {
+    body: payload.body || "Ada pesanan baru dari QR Code",
+    icon: payload.icon || "/icons/icon-192.png",
+    badge: payload.badge || "/icons/favicon-32.png",
+    data: payload.data || { url: "/admin/orders" },
+    tag: payload.tag || `order-${Date.now()}`,
+    renotify: true,
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification?.data?.url || "/admin/orders";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if ("focus" in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+      return null;
+    })
+  );
+});

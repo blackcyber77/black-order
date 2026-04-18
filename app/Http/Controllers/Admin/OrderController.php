@@ -13,6 +13,7 @@ class OrderController extends Controller
     public function qrNotifications(Request $request)
     {
         $query = Order::query()
+            ->with(['items.menuItem'])
             ->whereNull('cashier_id')
             ->where('payment_method', Order::PAYMENT_QRIS)
             ->latest('created_at')
@@ -45,6 +46,7 @@ class OrderController extends Controller
                     'formatted_total' => $order->formatted_total,
                     'created_at_label' => $order->created_at->format('H:i'),
                     'thermal_print_url' => route('admin.orders.thermal-print', $order),
+                    'thermal_text' => $this->buildThermalText($order),
                 ];
             })->values(),
             'latest_created_at' => $latestCreatedAt,
@@ -206,5 +208,45 @@ class OrderController extends Controller
                 $query->whereDate('created_at', '<=', $endDate);
             }
         }
+    }
+
+    private function buildThermalText(Order $order): string
+    {
+        $lineWidth = 32;
+        $lines = [
+            str_pad('ORDER KITB', $lineWidth, ' ', STR_PAD_BOTH),
+            str_pad('Kantin Industri Batang', $lineWidth, ' ', STR_PAD_BOTH),
+            str_repeat('-', $lineWidth),
+            'No   : ' . $order->order_number,
+            'Wkt  : ' . $order->created_at->format('d/m H:i'),
+            'Meja : ' . ($order->table_number ?: '-'),
+            'Cust : ' . ($order->customer_name ?: '-'),
+            str_repeat('-', $lineWidth),
+        ];
+
+        foreach ($order->items as $item) {
+            $name = $item->menuItem?->name ?? 'Menu';
+            $qty = (int) $item->quantity;
+            $subtotal = 'Rp' . number_format((float) $item->subtotal, 0, ',', '.');
+            $itemLine = "{$qty}x {$name}";
+
+            if (strlen($itemLine) > $lineWidth - 1) {
+                $itemLine = substr($itemLine, 0, $lineWidth - 1);
+            }
+
+            $lines[] = $itemLine;
+            $lines[] = str_pad('', max(0, $lineWidth - strlen($subtotal)), ' ') . $subtotal;
+        }
+
+        $lines[] = str_repeat('-', $lineWidth);
+        $lines[] = 'Subtotal : Rp' . number_format((float) $order->subtotal, 0, ',', '.');
+        $lines[] = 'Layanan  : Rp' . number_format((float) $order->service_fee, 0, ',', '.');
+        $lines[] = 'Total    : ' . str_replace(' ', '', $order->formatted_total);
+        $lines[] = str_repeat('-', $lineWidth);
+        $lines[] = str_pad('Terima kasih', $lineWidth, ' ', STR_PAD_BOTH);
+        $lines[] = '';
+        $lines[] = '';
+
+        return implode("\n", $lines);
     }
 }
