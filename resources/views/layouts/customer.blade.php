@@ -101,6 +101,34 @@
         .bg-slate-100, .bg-gray-100, .bg-gray-50 {
             background: #f0eee6 !important;
         }
+        @media (max-width: 767px) {
+            header #main-header,
+            #main-header .h-20 {
+                height: 4rem;
+            }
+            #main-header .container {
+                padding-left: 0.9rem;
+                padding-right: 0.9rem;
+            }
+            #main-header h1 {
+                font-size: 1rem;
+            }
+            #main-header p {
+                font-size: 9px;
+            }
+            main.pt-24 {
+                padding-top: 5rem;
+            }
+            main .grid {
+                row-gap: 0.9rem;
+            }
+            .md\:hidden.fixed.bottom-0 {
+                padding-left: 1rem;
+                padding-right: 1rem;
+                padding-top: 0.6rem;
+                padding-bottom: 0.6rem;
+            }
+        }
     </style>
 </head>
 <body class="font-sans pb-20 md:pb-0">

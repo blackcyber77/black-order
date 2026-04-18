@@ -177,6 +177,40 @@
         .bg-navy-800 {
             background-color: var(--dark-surface) !important;
         }
+        @media (max-width: 767px) {
+            header.glass {
+                height: 4rem;
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            header.glass h2 {
+                font-size: 1.05rem;
+                line-height: 1.2;
+            }
+            main {
+                padding: 1rem !important;
+            }
+            main table.w-full {
+                min-width: 760px;
+            }
+            main .overflow-hidden {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+            main .flex.justify-between.items-center.mb-6 {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+            main form.flex.gap-2.flex-wrap,
+            main form.bg-white.rounded-xl.shadow-sm.border.border-gray-100.p-4.mb-4.flex.flex-wrap.gap-3.items-center {
+                width: 100%;
+            }
+            main form.flex.gap-2.flex-wrap > *,
+            main form.bg-white.rounded-xl.shadow-sm.border.border-gray-100.p-4.mb-4.flex.flex-wrap.gap-3.items-center > * {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body class="font-sans antialiased">
@@ -241,7 +275,7 @@
         <!-- Main Content -->
         <div class="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 relative">
             <!-- Glass Header -->
-            <header class="h-20 glass flex items-center justify-between px-8 sticky top-0 z-10 w-full">
+            <header class="h-16 md:h-20 glass flex items-center justify-between px-4 md:px-8 sticky top-0 z-10 w-full">
                 <div class="flex items-center gap-4">
                     <button class="md:hidden text-slate-600 hover:text-navy-800 transition">
                         <i class="fas fa-bars text-xl"></i>
@@ -249,7 +283,7 @@
                     <button id="sidebar-toggle-desktop" class="hidden md:inline-flex text-slate-600 hover:text-navy-800 transition" title="Minimize Sidebar">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
-                    <h2 class="text-xl font-bold text-navy-800">@yield('title')</h2>
+                    <h2 class="text-lg md:text-xl font-bold text-navy-800">@yield('title')</h2>
                 </div>
                 
                 <div class="flex items-center gap-4">
@@ -264,7 +298,7 @@
             </header>
 
             <!-- Scrollable Content -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto p-8">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-8">
                 @if(session('success'))
                     <div class="mb-6 bg-green-50/50 backdrop-blur border border-green-200 text-green-700 px-6 py-4 rounded-xl shadow-sm flex items-center gap-3 animate-fade-in-down">
                         <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
