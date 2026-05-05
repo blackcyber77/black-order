@@ -46,7 +46,6 @@ class OrderController extends Controller
         }
 
         $serviceFee = Setting::getServiceFee();
-        $qrisImage = Setting::getQrisImage();
 
         $tableNumber = session('table_number');
         $deliveryFee = 0;
@@ -62,7 +61,6 @@ class OrderController extends Controller
             'serviceFee',
             'deliveryFee',
             'total',
-            'qrisImage',
             'tableNumber',
             'paymentMethods'
         ));
@@ -79,7 +77,6 @@ class OrderController extends Controller
             'customer_email' => 'nullable|email|max:255',
             'table_number' => 'required|string|max:50',
             'payment_method' => "required|in:{$allowedMethods}",
-            'payment_proof' => 'nullable|image|max:2048',
             'notes' => 'nullable|string|max:1000',
         ]);
 
@@ -120,12 +117,6 @@ class OrderController extends Controller
             $deliveryFee = 0;
             $total = $subtotal + $serviceFee + $deliveryFee;
 
-            // Handle payment proof upload
-            $paymentProof = null;
-            if ($request->hasFile('payment_proof')) {
-                $paymentProof = $request->file('payment_proof')->store('payments', 'public');
-            }
-
             // Create order — payment always starts as 'pending' for cashless
             // Will be updated by payment gateway callback or admin verification
             $order = Order::create([
@@ -136,7 +127,7 @@ class OrderController extends Controller
                 'customer_email' => $request->customer_email,
                 'payment_method' => $request->payment_method,
                 'payment_status' => 'pending',
-                'payment_proof' => $paymentProof,
+                'payment_gateway' => 'ipaymu',
                 'subtotal' => $subtotal,
                 'service_fee' => $serviceFee,
                 'delivery_fee' => $deliveryFee,
@@ -166,8 +157,8 @@ class OrderController extends Controller
 
             DB::commit();
 
-            return redirect()->route('orders.confirmation', $order->order_number)
-                ->with('success', 'Pesanan berhasil dibuat!');
+            return redirect()->route('payment.create', $order)
+                ->with('success', 'Pesanan berhasil dibuat. Lanjutkan pembayaran di iPaymu.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -181,9 +172,7 @@ class OrderController extends Controller
             ->where('order_number', $orderNumber)
             ->firstOrFail();
 
-        $qrisImage = Setting::getQrisImage();
-
-        return view('customer.orders.confirmation', compact('order', 'qrisImage'));
+        return view('customer.orders.confirmation', compact('order'));
     }
 
     public function track(Request $request)

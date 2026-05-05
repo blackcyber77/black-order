@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title') - Admin Kantin</title>
+    <title>@hasSection('title')@yield('title') | @endif order sinom by z</title>
     <meta name="theme-color" content="#141413">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="OrderKITB">
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
-    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <link rel="shortcut icon" href="{{ asset('icons/favicon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('icons/favicon-32.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Source+Serif+4:wght@500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Manrope', 'Arial', 'sans-serif'],
-                        serif: ['Source Serif 4', 'Georgia', 'serif'],
+                        sans: ['Nunito', 'Arial', 'sans-serif'],
+                        serif: ['Nunito', 'Arial', 'sans-serif'],
                     },
                     colors: {
                         parchment: '#F5F4ED',
@@ -38,8 +38,8 @@
                             900: '#141413',
                         },
                         orange: {
-                            500: '#C96442',
-                            600: '#B85A3D',
+                            500: '#E89A48',
+                            600: '#D98935',
                         }
                     }
                 }
@@ -52,8 +52,8 @@
             --ivory: #faf9f5;
             --near-black: #141413;
             --dark-surface: #30302e;
-            --terracotta: #c96442;
-            --terracotta-dark: #b85a3d;
+            --terracotta: #e89a48;
+            --terracotta-dark: #d98935;
             --border-cream: #f0eee6;
             --border-warm: #e8e6dc;
             --text-secondary: #5e5d59;
@@ -69,7 +69,7 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .sidebar-link:hover, .sidebar-link.active {
-            background: rgba(201, 100, 66, 0.12);
+            background: rgba(232, 154, 72, 0.14);
             border-left: 4px solid var(--terracotta);
             padding-left: 1rem;
         }
@@ -99,24 +99,49 @@
             padding-right: 0;
         }
         .qr-notification-enter {
-            animation: qrNotifSlideIn 0.35s ease-out;
+            animation: qrNotifSlideIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         @keyframes qrNotifSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px) scale(0.98);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+            from { opacity: 0; transform: translateX(60px) scale(0.92); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        .notif-pulse {
+            animation: notifPulseGlow 2s ease-in-out infinite;
+        }
+        @keyframes notifPulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(232, 154, 72, 0.5); }
+            50%       { box-shadow: 0 0 20px 6px rgba(232, 154, 72, 0.35); }
+        }
+        .notif-shake {
+            animation: notifShake 0.6s ease-in-out;
+        }
+        @keyframes notifShake {
+            0%, 100% { transform: translateX(0); }
+            15%      { transform: translateX(-6px) rotate(-1deg); }
+            30%      { transform: translateX(5px) rotate(1deg); }
+            45%      { transform: translateX(-4px); }
+            60%      { transform: translateX(3px); }
+            75%      { transform: translateX(-2px); }
+        }
+        .notif-exit {
+            animation: notifSlideOut 0.3s ease-in forwards;
+        }
+        @keyframes notifSlideOut {
+            to { opacity: 0; transform: translateX(60px) scale(0.92); }
+        }
+        #order-notif-badge {
+            animation: badgeBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes badgeBounce {
+            from { transform: scale(0); }
+            to   { transform: scale(1); }
         }
         body {
             background: var(--paper);
             color: var(--near-black);
         }
         h1, h2, h3, .font-bold.text-navy-800, .font-bold.text-navy-900 {
-            font-family: "Source Serif 4", Georgia, serif;
+            font-family: "Nunito", Arial, sans-serif;
             letter-spacing: 0;
         }
         main .bg-white {
@@ -224,11 +249,9 @@
         <aside class="w-64 bg-navy-900 text-[#b0aea5] flex-shrink-0 hidden md:flex flex-col transition-all duration-300 shadow-xl z-20">
             <div class="h-20 flex items-center px-8 border-b border-white/10">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-6 transition">
-                        <i class="fas fa-utensils text-white text-lg"></i>
-                    </div>
+                    <img src="{{ asset('images/logo-sinom.png') }}" alt="SINOM" class="w-11 h-11 object-contain rounded-lg">
                     <div class="brand-text">
-                        <h1 class="font-bold text-xl tracking-wide">Order KITB</h1>
+                        <h1 class="font-bold text-xl tracking-wide">SINOM</h1>
                         <p class="text-xs text-slate-400 uppercase tracking-wider">Admin Panel</p>
                     </div>
                 </div>
@@ -247,6 +270,9 @@
                 </a>
                 <a href="{{ route('admin.menus.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.menus.*') ? 'active bg-white/5 text-white' : '' }}">
                     <i class="fas fa-utensils mr-3 opacity-70"></i><span class="sidebar-label">Manajemen Menu</span>
+                </a>
+                <a href="{{ route('admin.menus.promos') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.menus.promos') ? 'active bg-white/5 text-white' : '' }}">
+                    <i class="fas fa-tags mr-3 opacity-70"></i><span class="sidebar-label">Promo & Bundling</span>
                 </a>
                 <a href="{{ route('admin.towers.index') }}" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-slate-300 hover:text-white {{ request()->routeIs('admin.towers.*') ? 'active bg-white/5 text-white' : '' }}">
                     <i class="fas fa-chair mr-3 opacity-70"></i><span class="sidebar-label">Meja</span>
@@ -291,7 +317,14 @@
                     <h2 class="text-lg md:text-xl font-bold text-navy-800">@yield('title')</h2>
                 </div>
                 
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 md:gap-4">
+                    <button id="notif-sound-toggle" type="button" class="w-10 h-10 rounded-full bg-white border border-[var(--border-warm)] text-[var(--text-secondary)] hover:text-[var(--near-black)] hover:border-[var(--terracotta)] transition relative" title="Suara notifikasi aktif">
+                        <i id="notif-sound-icon" class="fas fa-volume-up text-sm"></i>
+                    </button>
+                    <button id="notif-bell-btn" type="button" class="w-10 h-10 rounded-full bg-white border border-[var(--border-warm)] text-[var(--text-secondary)] hover:text-[var(--near-black)] hover:border-[var(--terracotta)] transition relative" title="Notifikasi pesanan">
+                        <i class="fas fa-bell text-sm"></i>
+                        <span id="order-notif-badge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center"></span>
+                    </button>
                     <button id="printer-toggle-btn" type="button" class="w-10 h-10 rounded-full bg-white border border-[var(--border-warm)] text-[var(--text-secondary)] hover:text-[var(--near-black)] hover:border-[var(--terracotta)] transition" title="Hubungkan printer thermal">
                         <i id="printer-toggle-icon" class="fas fa-print text-sm"></i>
                     </button>
@@ -374,377 +407,16 @@
                 });
             }
 
-            const notificationsUrl = @json(route('admin.orders.qr-notifications'));
-            const orderDetailBaseUrl = @json(url('/admin/orders'));
-            const thermalPrintStorageKey = 'admin_qr_auto_thermal_print';
-            const pollIntervalMs = 3000;
-            const sinceStorageKey = 'admin_qr_notif_since';
-            const notifiedIdsStorageKey = 'admin_qr_notified_ids';
-            const audioUnlockedStorageKey = 'admin_qr_audio_unlocked';
-            const printerConnectedStorageKey = 'admin_bt_printer_connected';
-
-            const notifContainer = document.createElement('div');
-            notifContainer.className = 'fixed top-24 right-4 md:right-8 z-50 space-y-3 w-[92vw] max-w-sm pointer-events-none';
-            document.body.appendChild(notifContainer);
-
-            let lastSince = localStorage.getItem(sinceStorageKey);
-            if (!lastSince) {
-                // Read recent orders window on first load so cashier doesn't miss near-real-time orders.
-                lastSince = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-                localStorage.setItem(sinceStorageKey, lastSince);
-            }
-
-            const savedIds = sessionStorage.getItem(notifiedIdsStorageKey);
-            const notifiedIds = new Set(savedIds ? JSON.parse(savedIds) : []);
-            const autoThermalPrintEnabled = localStorage.getItem(thermalPrintStorageKey) !== '0';
-            let audioContext = null;
-            let audioUnlocked = localStorage.getItem(audioUnlockedStorageKey) === '1';
-            let printerDevice = null;
-            let printerCharacteristic = null;
-            const printerToggleBtn = document.getElementById('printer-toggle-btn');
-            const printerToggleIcon = document.getElementById('printer-toggle-icon');
-            let printerConnected = localStorage.getItem(printerConnectedStorageKey) === '1';
-
-            function persistNotifiedIds() {
-                const ids = Array.from(notifiedIds).slice(-200);
-                sessionStorage.setItem(notifiedIdsStorageKey, JSON.stringify(ids));
-            }
-
-            function updatePrinterUi(connected) {
-                if (!printerToggleBtn || !printerToggleIcon) return;
-                printerToggleBtn.classList.toggle('connected', connected);
-                printerToggleBtn.title = connected ? 'Putuskan printer thermal' : 'Hubungkan printer thermal';
-                printerToggleIcon.className = connected ? 'fas fa-print text-sm' : 'fas fa-print text-sm';
-            }
-
-            function textToEscPos(text) {
-                const encoder = new TextEncoder();
-                const init = new Uint8Array([0x1b, 0x40]); // initialize
-                const alignLeft = new Uint8Array([0x1b, 0x61, 0x00]);
-                const body = encoder.encode(text.replace(/\n/g, '\r\n'));
-                const feedCut = new Uint8Array([0x0a, 0x0a, 0x1d, 0x56, 0x41, 0x10]); // feed + cut
-
-                const merged = new Uint8Array(init.length + alignLeft.length + body.length + feedCut.length);
-                merged.set(init, 0);
-                merged.set(alignLeft, init.length);
-                merged.set(body, init.length + alignLeft.length);
-                merged.set(feedCut, init.length + alignLeft.length + body.length);
-                return merged;
-            }
-
-            async function resolveWritableCharacteristic(device) {
-                const server = await device.gatt.connect();
-                const services = await server.getPrimaryServices();
-
-                for (const service of services) {
-                    const chars = await service.getCharacteristics();
-                    for (const ch of chars) {
-                        if (ch.properties.write || ch.properties.writeWithoutResponse) {
-                            return ch;
-                        }
-                    }
-                }
-
-                throw new Error('Karakteristik printer tidak ditemukan');
-            }
-
-            async function connectPrinter() {
-                if (!navigator.bluetooth) {
-                    alert('Browser ini belum mendukung Web Bluetooth.');
-                    return;
-                }
-
-                const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: [0xFFE0, 0xFF00, 0x180F, 0x18F0]
-                });
-
-                device.addEventListener('gattserverdisconnected', () => {
-                    printerDevice = null;
-                    printerCharacteristic = null;
-                    printerConnected = false;
-                    localStorage.setItem(printerConnectedStorageKey, '0');
-                    updatePrinterUi(false);
-                });
-
-                printerCharacteristic = await resolveWritableCharacteristic(device);
-                printerDevice = device;
-                printerConnected = true;
-                localStorage.setItem(printerConnectedStorageKey, '1');
-                updatePrinterUi(true);
-            }
-
-            async function disconnectPrinter() {
-                try {
-                    if (printerDevice?.gatt?.connected) {
-                        printerDevice.gatt.disconnect();
-                    }
-                } catch (error) {
-                    // Ignore disconnect errors.
-                }
-                printerDevice = null;
-                printerCharacteristic = null;
-                printerConnected = false;
-                localStorage.setItem(printerConnectedStorageKey, '0');
-                updatePrinterUi(false);
-            }
-
-            async function writeToPrinter(bytes) {
-                if (!printerCharacteristic) {
-                    if (!printerConnected) return;
-                    throw new Error('Printer belum terhubung');
-                }
-
-                const chunkSize = 180;
-                for (let i = 0; i < bytes.length; i += chunkSize) {
-                    const chunk = bytes.slice(i, i + chunkSize);
-                    if (printerCharacteristic.properties.writeWithoutResponse) {
-                        await printerCharacteristic.writeValueWithoutResponse(chunk);
-                    } else {
-                        await printerCharacteristic.writeValue(chunk);
-                    }
-                    await new Promise((r) => setTimeout(r, 20));
-                }
-            }
-
-            async function printThermalText(order) {
-                if (!autoThermalPrintEnabled || !printerConnected || !order.thermal_text) return;
-                try {
-                    if (!printerCharacteristic && printerDevice) {
-                        printerCharacteristic = await resolveWritableCharacteristic(printerDevice);
-                    }
-                    const bytes = textToEscPos(order.thermal_text);
-                    await writeToPrinter(bytes);
-                } catch (error) {
-                    console.warn('Gagal print thermal bluetooth:', error);
-                    // Keep showing popup even if print fails.
-                }
-            }
-
-            async function ensureNotificationPermission() {
-                if (!('Notification' in window)) return;
-                if (Notification.permission === 'default') {
-                    try {
-                        await Notification.requestPermission();
-                    } catch (error) {
-                        // Ignore; browser may reject without user gesture.
-                    }
-                }
-            }
-
-            function unlockAudio() {
-                if (audioUnlocked) return;
-                try {
-                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                    if (AudioContextClass) {
-                        audioContext = audioContext || new AudioContextClass();
-                        if (audioContext.state === 'suspended') {
-                            audioContext.resume();
-                        }
-                    }
-                    audioUnlocked = true;
-                    localStorage.setItem(audioUnlockedStorageKey, '1');
-                } catch (error) {
-                    // Ignore unlock failure.
-                }
-            }
-
-            function playNotificationSound() {
-                try {
-                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                    if (!AudioContextClass) return;
-                    const ctx = audioContext || new AudioContextClass();
-                    audioContext = ctx;
-                    if (ctx.state === 'suspended') {
-                        ctx.resume();
-                    }
-                    const oscillator = ctx.createOscillator();
-                    const gainNode = ctx.createGain();
-
-                    oscillator.type = 'triangle';
-                    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-                    gainNode.gain.setValueAtTime(0.0001, ctx.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
-                    gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
-
-                    oscillator.connect(gainNode);
-                    gainNode.connect(ctx.destination);
-
-                    oscillator.start();
-                    oscillator.stop(ctx.currentTime + 0.26);
-                } catch (error) {
-                    // Audio may be blocked by browser policies.
-                }
-            }
-
-            async function showSystemNotification(order) {
-                if (!('Notification' in window) || Notification.permission !== 'granted') {
-                    return;
-                }
-
-                const title = `Pesanan QR Baru • ${order.order_number}`;
-                const options = {
-                    body: `${order.customer_name || 'Pelanggan'} • Meja ${order.table_number || '-'} • ${order.formatted_total}`,
-                    icon: '/icons/icon-192.png',
-                    badge: '/icons/favicon-32.png',
-                    tag: `qr-order-${order.id}`,
-                    renotify: true,
-                    data: {
-                        orderId: order.id,
-                        url: `${orderDetailBaseUrl}/${order.id}`
-                    }
-                };
-
-                try {
-                    if ('serviceWorker' in navigator) {
-                        const registration = await navigator.serviceWorker.ready;
-                        await registration.showNotification(title, options);
-                        return;
-                    }
-                } catch (error) {
-                    // Fallback to Notification API below.
-                }
-
-                try {
-                    const n = new Notification(title, options);
-                    n.onclick = function () {
-                        window.focus();
-                        window.location.href = `${orderDetailBaseUrl}/${order.id}`;
-                        n.close();
-                    };
-                } catch (error) {
-                    // Ignore unsupported environments.
-                }
-            }
-
-            function createNotificationCard(order) {
-                const card = document.createElement('div');
-                card.className = 'pointer-events-auto qr-notification-enter rounded-2xl border border-blue-100 shadow-xl bg-white overflow-hidden';
-                card.innerHTML = `
-                    <div class="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-4 py-2 text-xs font-semibold tracking-wide uppercase">
-                        Pesanan Baru QR
-                    </div>
-                    <div class="p-4">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="font-bold text-slate-900 text-sm">${order.order_number}</p>
-                                <p class="text-xs text-slate-500 mt-0.5">${order.created_at_label} • Meja ${order.table_number || '-'}</p>
-                            </div>
-                            <button class="text-slate-300 hover:text-slate-500 transition text-sm" aria-label="Tutup notifikasi">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                        <p class="text-sm text-slate-700 mt-2">${order.customer_name || 'Pelanggan'}</p>
-                        <div class="flex items-center justify-between mt-3">
-                            <span class="text-sm font-semibold text-green-600">${order.formatted_total}</span>
-                            <div class="flex items-center gap-2">
-                                <a href="${order.thermal_print_url}?autoprint=1" target="_blank" class="text-xs px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
-                                    Print
-                                </a>
-                                <a href="${orderDetailBaseUrl}/${order.id}" class="text-xs px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-700 transition">
-                                    Lihat Detail
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                const closeButton = card.querySelector('button');
-                closeButton.addEventListener('click', () => {
-                    card.remove();
-                });
-
-                setTimeout(() => {
-                    card.remove();
-                }, 12000);
-
-                return card;
-            }
-
-            function triggerThermalAutoPrint(order) {
-                if (!autoThermalPrintEnabled || !order.thermal_print_url || printerConnected) return;
-
-                const iframe = document.createElement('iframe');
-                iframe.style.position = 'fixed';
-                iframe.style.width = '1px';
-                iframe.style.height = '1px';
-                iframe.style.opacity = '0';
-                iframe.style.pointerEvents = 'none';
-                iframe.style.bottom = '0';
-                iframe.style.right = '0';
-                iframe.src = `${order.thermal_print_url}?autoprint=1`;
-
-                document.body.appendChild(iframe);
-                setTimeout(() => iframe.remove(), 45000);
-            }
-
-            async function fetchQrNotifications() {
-                try {
-                    const url = `${notificationsUrl}?since=${encodeURIComponent(lastSince)}`;
-                    const response = await fetch(url, {
-                        cache: 'no-store',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-
-                    if (!response.ok) return;
-                    const payload = await response.json();
-                    const orders = Array.isArray(payload.orders) ? payload.orders : [];
-
-                    const newOrders = orders.filter((order) => !notifiedIds.has(order.id));
-                    if (newOrders.length > 0) {
-                        playNotificationSound();
-                    }
-
-                    newOrders.reverse().forEach((order) => {
-                        notifiedIds.add(order.id);
-                        printThermalText(order);
-                        triggerThermalAutoPrint(order);
-                        notifContainer.appendChild(createNotificationCard(order));
-                        if (document.hidden || !document.hasFocus()) {
-                            showSystemNotification(order);
-                        }
-                    });
-
-                    if (payload.latest_created_at) {
-                        lastSince = payload.latest_created_at;
-                        localStorage.setItem(sinceStorageKey, lastSince);
-                    }
-
-                    persistNotifiedIds();
-                } catch (error) {
-                    // Ignore polling errors; next tick will retry.
-                }
-            }
-
-            ensureNotificationPermission();
-            updatePrinterUi(printerConnected);
-            if (printerToggleBtn) {
-                printerToggleBtn.addEventListener('click', async () => {
-                    try {
-                        if (printerConnected) {
-                            await disconnectPrinter();
-                        } else {
-                            await connectPrinter();
-                        }
-                    } catch (error) {
-                        alert('Gagal menghubungkan printer. Pastikan printer thermal bluetooth menyala dan dalam mode pairing.');
-                    }
-                });
-            }
-            ['click', 'touchstart', 'keydown'].forEach((eventName) => {
-                window.addEventListener(eventName, unlockAudio, { once: true, passive: true });
-            });
-            fetchQrNotifications();
-            setInterval(fetchQrNotifications, pollIntervalMs);
-            document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) {
-                    fetchQrNotifications();
-                }
-            });
+            // ── Notification system (external) ──
+            // URLs are passed via data-* attributes on the script tag.
         });
     </script>
+    <script
+        id="admin-notif-script"
+        src="{{ asset('js/admin-notifications.js') }}"
+        data-all-notifications-url="{{ route('admin.orders.all-notifications') }}"
+        data-qr-notifications-url="{{ route('admin.orders.qr-notifications') }}"
+        data-order-detail-base-url="{{ url('/admin/orders') }}"
+    ></script>
 </body>
 </html>

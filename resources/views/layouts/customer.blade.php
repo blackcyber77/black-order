@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title') - Kantin Industri Batang</title>
+    <title>@hasSection('title')@yield('title') | @endif order sinom by z</title>
     <meta name="theme-color" content="#141413">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="OrderKITB">
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
-    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <link rel="shortcut icon" href="{{ asset('icons/favicon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('icons/favicon-32.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Source+Serif+4:wght@500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Manrope', 'Arial', 'sans-serif'],
-                        serif: ['Source Serif 4', 'Georgia', 'serif'],
+                        sans: ['Nunito', 'Arial', 'sans-serif'],
+                        serif: ['Nunito', 'Arial', 'sans-serif'],
                     },
                     colors: {
                         parchment: '#F5F4ED',
@@ -31,8 +31,8 @@
                             900: '#141413',
                         },
                         orange: {
-                            500: '#C96442',
-                            600: '#B85A3D',
+                            500: '#E89A48',
+                            600: '#D98935',
                         }
                     },
                     animation: {
@@ -54,8 +54,8 @@
             --paper: #f5f4ed;
             --ivory: #faf9f5;
             --near-black: #141413;
-            --terracotta: #c96442;
-            --terracotta-dark: #b85a3d;
+            --terracotta: #e89a48;
+            --terracotta-dark: #d98935;
             --border-cream: #f0eee6;
             --border-warm: #e8e6dc;
             --text-secondary: #5e5d59;
@@ -76,9 +76,7 @@
             background: var(--paper);
             color: var(--near-black);
         }
-        h1, h2, h3, .font-bold {
-            font-family: "Source Serif 4", Georgia, serif;
-        }
+        h1, h2, h3, .font-bold { font-family: "Nunito", Arial, sans-serif; }
         .bg-white {
             background: var(--ivory) !important;
             border-color: var(--border-cream) !important;
@@ -139,12 +137,10 @@
             <div class="flex justify-between items-center h-20">
                 <!-- Logo -->
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg">
-                        <i class="fas fa-utensils text-lg"></i>
-                    </div>
+                    <img src="{{ asset('images/logo-sinom.png') }}" alt="SINOM" class="w-11 h-11 object-contain rounded-lg">
                     <div>
-                        <h1 class="text-xl font-bold text-navy-900 tracking-tight leading-none">Order KITB</h1>
-                        <p class="text-[10px] text-slate-500 font-medium uppercase tracking-widest">Kantin Industri Batang</p>
+                        <h1 class="text-xl font-bold text-navy-900 tracking-tight leading-none">SINOM</h1>
+                        <p class="text-[10px] text-slate-500 font-medium uppercase tracking-widest">coffee &amp; space</p>
                     </div>
                 </div>
 
@@ -203,10 +199,6 @@
         <a href="{{ route('orders.track') }}" class="flex flex-col items-center gap-1 {{ request()->routeIs('orders.track') ? 'text-orange-600' : 'text-slate-400' }}">
             <i class="fas fa-clock text-xl"></i>
             <span class="text-[10px] font-medium">Pesanan</span>
-        </a>
-        <a href="{{ route('login') }}" class="flex flex-col items-center gap-1 text-slate-400">
-            <i class="fas fa-user text-xl"></i>
-            <span class="text-[10px] font-medium">Akun</span>
         </a>
     </div>
 

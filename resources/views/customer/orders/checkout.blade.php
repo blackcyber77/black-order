@@ -18,7 +18,7 @@
     </div>
     @endif
 
-    <form action="{{ route('orders.store') }}" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <form action="{{ route('orders.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-8">
         @csrf
         
         <!-- Left Column: Customer Data & Payment -->
@@ -95,7 +95,7 @@
                     <i class="fas fa-shield-alt text-blue-500 text-lg mt-0.5"></i>
                     <div>
                         <p class="text-sm font-bold text-blue-900">Pembayaran Cashless</p>
-                        <p class="text-xs text-blue-700 mt-1">Pemesanan via QR Code hanya menerima pembayaran digital (QRIS).</p>
+                        <p class="text-xs text-blue-700 mt-1">Setelah klik Buat Pesanan, Anda akan diarahkan ke halaman pembayaran iPaymu (Sandbox).</p>
                     </div>
                 </div>
 
@@ -123,39 +123,13 @@
                 <!-- QRIS Payment Section -->
                 <div id="qris_section" class="mt-6 animate-fade-in-down">
                     <div class="bg-gray-50 p-6 rounded-xl border border-gray-200 flex flex-col items-center text-center">
-                        <p class="font-bold text-navy-900 mb-2">Scan QRIS di bawah ini</p>
-                        <p class="text-xs text-gray-500 mb-4">Gunakan aplikasi e-wallet atau mobile banking Anda</p>
-                        
-                        @if($qrisImage)
-                            <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-4 inline-block">
-                                <img src="{{ asset('storage/' . $qrisImage) }}" alt="QRIS Code" class="h-48 object-contain">
-                            </div>
-                        @else
-                            <div class="w-48 h-48 bg-gray-200 rounded-xl flex items-center justify-center mb-4 text-gray-400">
-                                <div class="text-center">
-                                    <i class="fas fa-qrcode text-4xl mb-2"></i>
-                                    <p class="text-xs">QRIS belum diatur</p>
-                                </div>
-                            </div>
-                        @endif
+                        <p class="font-bold text-navy-900 mb-2">Pembayaran diproses via iPaymu</p>
+                        <p class="text-xs text-gray-500 mb-4">Sistem akan otomatis membuka halaman iPaymu untuk memilih channel pembayaran.</p>
 
-                        <div class="w-full max-w-sm">
-                            <label class="block text-sm font-bold text-navy-900 mb-2 text-left">Upload Bukti Pembayaran</label>
-                            <input type="file" name="payment_proof" accept="image/*" class="w-full text-sm text-gray-500
-                                file:mr-4 file:py-2.5 file:px-4
-                                file:rounded-full file:border-0
-                                file:text-sm file:font-bold
-                                file:bg-orange-50 file:text-orange-700
-                                hover:file:bg-orange-100 transition
-                            ">
-                            <p class="text-xs text-gray-500 mt-2 text-left">Format: JPG, PNG. Maks: 2MB</p>
-                        </div>
-
-                        <!-- Payment status info -->
-                        <div class="mt-4 p-3 bg-yellow-50 border border-yellow-100 rounded-lg w-full max-w-sm">
+                        <div class="mt-1 p-3 bg-yellow-50 border border-yellow-100 rounded-lg w-full max-w-sm">
                             <p class="text-xs text-yellow-800">
                                 <i class="fas fa-info-circle mr-1"></i>
-                                Pembayaran akan diverifikasi oleh admin. Anda akan mendapat notifikasi setelah pembayaran dikonfirmasi.
+                                Untuk callback pembayaran otomatis di lokal, gunakan URL publik (mis. ngrok) pada APP_URL.
                             </p>
                         </div>
                     </div>

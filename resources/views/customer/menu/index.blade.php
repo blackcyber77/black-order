@@ -1,6 +1,6 @@
 @extends('layouts.customer')
 
-@section('title', 'asu')
+@section('title', 'Menu')
 
 @section('content')
     <!-- Hero Section -->
@@ -13,10 +13,9 @@
 
         <div class="container mx-auto px-4 relative z-10">
             <div class="max-w-2xl">
-                <h1 class="text-4xl md:text-5xl font-bold mb-4 leading-tight">Lapar? <br><span class="text-orange-500">Pesan
-                        Sekarang</span>, Diantar Langsung.</h1>
-                <p class="text-slate-300 text-lg mb-8">Nikmati berbagai pilihan kuliner terbaik dari tenant kami, pesan
-                    langsung dari meja Anda.</p>
+                <h1 class="text-4xl md:text-5xl font-bold mb-8 leading-tight">
+                    <span class="text-orange-500">coffee,work,repeat</span>
+                </h1>
 
                 <!-- Table Selector -->
                 <div class="bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl flex gap-2 max-w-md">
@@ -26,9 +25,9 @@
                             <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Lokasi Anda</span>
                             <div class="font-bold text-navy-900 text-sm">
                                 @if($tableNumber)
-                                    Meja {{ $tableNumber }}
+                                    Workspace {{ $tableNumber }}
                                 @else
-                                    Scan QR Meja
+                                    Scan QR Workspace
                                 @endif
                             </div>
                         </div>
@@ -36,7 +35,7 @@
                     @if(!$tableNumber)
                         <button onclick="openScanner()"
                             class="bg-orange-500 hover:bg-orange-600 text-white px-6 rounded-xl font-bold transition shadow-lg shadow-orange-500/30">
-                            <i class="fas fa-qrcode mr-2"></i> Scan
+                            <i class="fas fa-qrcode mr-2"></i> Scan Spot
                         </button>
                     @else
                         <a href="{{ route('location.clear') }}"
@@ -102,19 +101,38 @@
                                 {{ $item->category->icon }} {{ $item->category->name }}
                             </span>
                         </div>
+                        @if($item->is_best_seller)
+                            <div class="absolute top-2 left-2">
+                                <span class="bg-amber-500/95 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
+                                    <i class="fas fa-fire mr-1"></i> BEST SELLER
+                                </span>
+                            </div>
+                        @endif
                     </div>
 
                     <!-- Content -->
                     <div class="p-4 flex-1 flex flex-col">
                         <div class="mb-2">
                             <h3 class="font-bold text-navy-900 leading-tight mb-1 line-clamp-1">{{ $item->name }}</h3>
+                            @if($item->is_promo && $item->promo_title)
+                                <div class="mb-1">
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold {{ $item->promo_type === 'bundling' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700' }}">
+                                        {{ $item->promo_type === 'bundling' ? 'BUNDLING' : 'PROMO' }} • {{ $item->promo_title }}
+                                    </span>
+                                </div>
+                            @endif
 
                         </div>
 
                         <p class="text-xs text-gray-600 mb-4 line-clamp-2 min-h-[2.5em]">{{ $item->description }}</p>
 
                         <div class="mt-auto flex items-center justify-between gap-3">
-                            <span class="font-bold text-lg text-navy-900">{{ $item->formatted_price }}</span>
+                            <div class="flex flex-col">
+                                @if($item->is_promo && $item->promo_original_price)
+                                    <span class="text-xs text-gray-400 line-through">{{ $item->formatted_promo_original_price }}</span>
+                                @endif
+                                <span class="font-bold text-lg text-navy-900">{{ $item->formatted_price }}</span>
+                            </div>
                             <button onclick="addToCart({{ $item->id }})"
                                 class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center hover:bg-orange-600 hover:text-white transition-all transform active:scale-95 shadow-sm">
                                 <i class="fas fa-plus text-sm"></i>

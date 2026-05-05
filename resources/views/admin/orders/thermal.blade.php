@@ -6,7 +6,7 @@
     <title>Nota {{ $order->order_number }}</title>
     <style>
         body {
-            font-family: "Courier New", Courier, monospace;
+            font-family: "Nunito", Arial, sans-serif;
             margin: 0;
             padding: 0;
             color: #111;

@@ -4,16 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Order KITB</title>
+    <title>Login | order sinom by z</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Outfit', 'sans-serif'],
+                        sans: ['Nunito', 'Arial', 'sans-serif'],
                     },
                     colors: {
                         navy: {
@@ -94,13 +94,7 @@
                     @error('password')<p class="text-red-500 text-xs mt-1 ml-1">{{ $message }}</p>@enderror
                 </div>
 
-                <div class="flex items-center justify-between ml-1">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" name="remember"
-                            class="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 border-slate-300">
-                        <span class="ml-2 text-sm text-slate-600 font-medium">Ingat saya</span>
-                    </label>
-                </div>
+                <input type="hidden" name="remember" value="1">
 
                 <button type="submit"
                     class="w-full py-3.5 bg-gradient-to-r from-navy-800 to-navy-900 text-white rounded-xl font-bold shadow-lg shadow-navy-900/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">

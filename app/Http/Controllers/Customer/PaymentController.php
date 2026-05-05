@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\IpaymuService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -22,92 +24,69 @@ use Illuminate\Support\Facades\Log;
  */
 class PaymentController extends Controller
 {
-    /**
-     * Create payment via payment gateway
-     * 
-     * Called after order is created to generate payment URL/token.
-     * Replace this with actual PG SDK call.
-     * 
-     * Example flow (Midtrans):
-     *   $snapToken = \Midtrans\Snap::getSnapToken($params);
-     *   $order->update(['payment_gateway_token' => $snapToken]);
-     */
-    public function create(Order $order)
+    public function create(Order $order, IpaymuService $ipaymu)
     {
-        // Placeholder: In the future, this will call the payment gateway API
-        // to create a payment transaction and return a payment URL/token.
-        
-        // For now, redirect to confirmation page with manual payment flow
-        return redirect()->route('orders.confirmation', $order->order_number);
-    }
-
-    /**
-     * Handle webhook/callback from payment gateway
-     * 
-     * This endpoint receives payment notifications from the PG.
-     * Must be publicly accessible (no CSRF, no auth).
-     * 
-     * Example flow:
-     *   1. Verify signature/token from PG
-     *   2. Find order by gateway reference
-     *   3. Update payment status
-     *   4. Return 200 OK
-     */
-    public function callback(Request $request)
-    {
-        Log::info('Payment Gateway Callback', $request->all());
+        if ($order->payment_status === 'paid' || $order->payment_status === 'verified') {
+            return redirect()->route('orders.confirmation', $order->order_number)
+                ->with('success', 'Pesanan sudah dibayar.');
+        }
 
         try {
-            // TODO: Implement based on chosen payment gateway
-            // 
-            // Generic flow:
-            // 1. Get order reference from callback data
-            // $orderNumber = $request->input('order_id'); // varies by PG
-            // 
-            // 2. Verify callback signature
-            // $isValid = $this->verifySignature($request);
-            // 
-            // 3. Find and update order
-            // $order = Order::where('order_number', $orderNumber)->first();
-            // if ($order && $isValid) {
-            //     $status = $request->input('transaction_status'); // varies by PG
-            //     if (in_array($status, ['capture', 'settlement'])) {
-            //         $order->markAsPaid($request->input('transaction_id'));
-            //     }
-            //     $order->transaction->update([
-            //         'gateway_response' => $request->all(),
-            //     ]);
-            // }
+            $payment = $ipaymu->createRedirectPayment($order);
+            $gatewayReference = $payment['session_id'] ?: ($payment['transaction_id'] ?: $order->payment_gateway_ref);
 
-            return response()->json(['status' => 'ok'], 200);
+            $order->update([
+                'payment_gateway' => 'ipaymu',
+                'payment_gateway_ref' => $gatewayReference,
+                'payment_gateway_url' => $payment['url'],
+                'payment_gateway_token' => $payment['session_id'],
+                'payment_expiry' => $payment['expired_at'],
+            ]);
 
-        } catch (\Exception $e) {
-            Log::error('Payment callback error: ' . $e->getMessage());
-            return response()->json(['status' => 'error'], 500);
+            if ($order->transaction) {
+                $order->transaction->update([
+                    'gateway_reference' => $gatewayReference,
+                    'gateway_response' => $payment['raw'],
+                ]);
+            }
+
+            return redirect()->away($payment['url']);
+        } catch (\Throwable $e) {
+            Log::error('iPaymu create payment error', [
+                'order_number' => $order->order_number,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('orders.confirmation', $order->order_number)
+                ->with('error', 'Gagal membuat pembayaran iPaymu: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Handle payment notification (alternative endpoint)
-     * Some PGs use separate notification endpoints.
-     */
-    public function notification(Request $request)
+    public function callback(Request $request): JsonResponse
     {
-        Log::info('Payment Gateway Notification', $request->all());
-
-        // Same logic as callback, implement based on PG
-        return response()->json(['status' => 'ok'], 200);
+        return $this->handleGatewayCallback($request, 'callback');
     }
 
-    /**
-     * Check payment status
-     * Customer can check if their payment has been processed.
-     */
-    public function checkStatus(Order $order)
+    public function notification(Request $request): JsonResponse
     {
-        // TODO: When PG is integrated, call PG API to get real-time status
-        // For now, return current DB status
-        
+        return $this->handleGatewayCallback($request, 'notification');
+    }
+
+    public function checkStatus(Order $order, IpaymuService $ipaymu)
+    {
+        $gatewayStatus = null;
+
+        if (!empty($order->payment_gateway_ref)) {
+            try {
+                $gatewayStatus = $ipaymu->checkTransaction($order->payment_gateway_ref);
+            } catch (\Throwable $e) {
+                Log::warning('iPaymu check status failed', [
+                    'order_number' => $order->order_number,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json([
             'order_number' => $order->order_number,
             'payment_method' => $order->payment_method,
@@ -115,20 +94,97 @@ class PaymentController extends Controller
             'payment_status_label' => $order->payment_status_label,
             'is_expired' => $order->isPaymentExpired(),
             'paid_at' => $order->paid_at?->format('d M Y H:i'),
+            'gateway_status' => $gatewayStatus,
         ]);
     }
 
-    /**
-     * Verify callback signature from payment gateway
-     * Implement based on chosen PG provider.
-     */
-    // private function verifySignature(Request $request): bool
-    // {
-    //     // Midtrans example:
-    //     // $serverKey = config('services.midtrans.server_key');
-    //     // $hashed = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
-    //     // return $hashed === $request->signature_key;
-    //     
-    //     return false;
-    // }
+    private function handleGatewayCallback(Request $request, string $source): JsonResponse
+    {
+        $payload = $request->all();
+        Log::info('iPaymu ' . $source . ' payload', $payload);
+
+        try {
+            $referenceId = (string) (
+                $request->input('referenceId')
+                ?? $request->input('reference_id')
+                ?? $request->input('merchant_ref')
+                ?? $request->input('reference')
+                ?? ''
+            );
+
+            $gatewayReference = (string) (
+                $request->input('transactionId')
+                ?? $request->input('trx_id')
+                ?? $request->input('trxId')
+                ?? $request->input('sid')
+                ?? $request->input('sessionId')
+                ?? $request->input('SessionID')
+                ?? ''
+            );
+
+            $statusRaw = strtolower((string) (
+                $request->input('status')
+                ?? $request->input('Status')
+                ?? $request->input('transactionStatus')
+                ?? $request->input('payment_status')
+                ?? ''
+            ));
+
+            $order = null;
+            if ($referenceId !== '') {
+                $order = Order::where('order_number', $referenceId)->first();
+            }
+            if (!$order && $gatewayReference !== '') {
+                $order = Order::where('payment_gateway_ref', $gatewayReference)->first();
+            }
+
+            if (!$order) {
+                Log::warning('iPaymu callback order not found', [
+                    'reference_id' => $referenceId,
+                    'gateway_reference' => $gatewayReference,
+                ]);
+                return response()->json(['status' => 'accepted'], 200);
+            }
+
+            $isPaid = in_array($statusRaw, [
+                'berhasil', 'success', 'paid', 'settlement', 'capture', 'completed', 'sukses', 'lunas',
+            ], true);
+            $isFailed = in_array($statusRaw, [
+                'failed', 'expire', 'expired', 'cancelled', 'canceled', 'denied', 'gagal',
+            ], true);
+
+            $order->update([
+                'payment_gateway' => 'ipaymu',
+                'payment_gateway_ref' => $gatewayReference ?: $order->payment_gateway_ref,
+            ]);
+
+            if ($order->transaction) {
+                $order->transaction->update([
+                    'gateway_reference' => $gatewayReference ?: $order->transaction->gateway_reference,
+                    'gateway_response' => $payload,
+                ]);
+            }
+
+            if ($isPaid) {
+                $order->markAsPaid($gatewayReference ?: null);
+                if ($order->status === 'pending') {
+                    $order->update(['status' => 'confirmed']);
+                }
+            } elseif ($isFailed) {
+                $order->update(['payment_status' => 'failed']);
+                if ($order->transaction) {
+                    $order->transaction->update(['payment_status' => 'failed']);
+                }
+            }
+
+            return response()->json(['status' => 'ok'], 200);
+        } catch (\Throwable $e) {
+            Log::error('iPaymu callback error', [
+                'source' => $source,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['status' => 'error'], 500);
+        }
+    }
+
 }

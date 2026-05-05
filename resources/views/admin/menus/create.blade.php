@@ -54,6 +54,11 @@
                 <label for="is_available" class="ml-2 text-sm text-gray-700">Tersedia untuk POS & QR Order</label>
             </div>
 
+            <div class="flex items-center">
+                <input type="checkbox" name="is_best_seller" value="1" id="is_best_seller" {{ old('is_best_seller') ? 'checked' : '' }} class="rounded text-orange-600 focus:ring-orange-500">
+                <label for="is_best_seller" class="ml-2 text-sm text-gray-700">Tandai sebagai Best Seller</label>
+            </div>
+
             <div class="flex flex-col gap-3 pt-6 border-t border-gray-100">
                 <button type="submit" class="w-full py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition font-bold shadow-lg shadow-orange-500/20">
                     Simpan Menu
@@ -69,4 +74,3 @@
     </div>
 </div>
 @endsection
-

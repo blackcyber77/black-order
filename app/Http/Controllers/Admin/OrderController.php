@@ -10,11 +10,55 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    /**
+     * Poll for new orders — used by the global notification system.
+     */
+    public function allNotifications(Request $request)
+    {
+        $query = Order::query()
+            ->with(['items.menuItem'])
+            ->latest('created_at')
+            ->latest('id');
+
+        if ($request->filled('since')) {
+            try {
+                $since = Carbon::parse($request->query('since'));
+                $query->where('created_at', '>', $since);
+            } catch (\Throwable $e) {
+                // Ignore invalid timestamp and return the latest snapshot.
+            }
+        }
+
+        $orders = $query->take(10)->get();
+        $latestCreatedAt = null;
+        $latestOrderTime = $orders->max('created_at');
+        if ($latestOrderTime) {
+            $latestCreatedAt = $latestOrderTime->toISOString();
+        }
+
+        return response()->json([
+            'orders' => $orders->map(function (Order $order) {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'customer_name' => $order->customer_name,
+                    'table_number' => $order->table_number,
+                    'status_label' => $order->status_label,
+                    'payment_method_label' => $order->payment_method_label,
+                    'formatted_total' => $order->formatted_total,
+                    'created_at_label' => $order->created_at->format('H:i'),
+                    'thermal_print_url' => route('admin.orders.thermal-print', $order),
+                    'thermal_text' => $this->buildThermalText($order),
+                ];
+            })->values(),
+            'latest_created_at' => $latestCreatedAt,
+        ]);
+    }
+
     public function qrNotifications(Request $request)
     {
         $query = Order::query()
             ->with(['items.menuItem'])
-            ->whereNull('cashier_id')
             ->where('payment_method', Order::PAYMENT_QRIS)
             ->latest('created_at')
             ->latest('id');
@@ -55,13 +99,11 @@ class OrderController extends Controller
 
     public function report(Request $request)
     {
-        $source = $request->input('source', 'all');
         $period = $request->input('period', 'today');
         $menuItemId = $request->input('menu_item_id');
 
-        $query = Order::with(['cashier', 'items.menuItem']);
+        $query = Order::with(['items.menuItem']);
 
-        $this->applySourceFilter($query, $source);
         $this->applyMenuFilter($query, $menuItemId);
         $this->applyDateFilter($query, $request, $period);
 
@@ -71,19 +113,17 @@ class OrderController extends Controller
         $this->applyDateFilter($summaryQuery, $request, $period);
         $summary = [
             'total_orders' => (clone $summaryQuery)->count(),
-            'walk_in_orders' => (clone $summaryQuery)->whereNotNull('cashier_id')->count(),
-            'qr_orders' => (clone $summaryQuery)->whereNull('cashier_id')->count(),
             'total_revenue' => (clone $summaryQuery)->sum('total'),
         ];
 
         $menuItems = MenuItem::orderBy('name')->get(['id', 'name']);
 
-        return view('admin.orders.report', compact('orders', 'menuItems', 'summary', 'source', 'period', 'menuItemId'));
+        return view('admin.orders.report', compact('orders', 'menuItems', 'summary', 'period', 'menuItemId'));
     }
 
     public function index(Request $request)
     {
-        $query = Order::with(['cashier']);
+        $query = Order::query();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -97,23 +137,31 @@ class OrderController extends Controller
             $query->where('payment_method', $request->payment_method);
         }
 
-        if ($request->filled('cashier_id')) {
-            $query->where('cashier_id', $request->cashier_id);
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('order_number', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhere('customer_phone', 'like', "%{$search}%");
+            });
         }
 
-        if ($request->filled('date')) {
-            $query->whereDate('created_at', $request->date);
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
         }
 
-        $orders = $query->latest()->paginate(20);
-        $cashiers = \App\Models\User::orderBy('name')->get(['id', 'name']);
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
 
-        return view('admin.orders.index', compact('orders', 'cashiers'));
+        $orders = $query->latest()->paginate(20)->appends($request->query());
+
+        return view('admin.orders.index', compact('orders'));
     }
 
     public function show(Order $order)
     {
-        $order->load(['cashier', 'items.menuItem', 'transaction']);
+        $order->load(['items.menuItem', 'transaction']);
         return view('admin.orders.show', compact('order'));
     }
 
@@ -150,22 +198,20 @@ class OrderController extends Controller
             'status' => 'required|in:pending,confirmed,processing,delivering,completed,cancelled',
         ]);
 
-        $order->update(['status' => $request->status]);
+        $nextStatus = $request->status;
+        $requiresPaid = in_array($nextStatus, ['confirmed', 'processing', 'delivering', 'completed'], true);
+        $isPaid = in_array($order->payment_status, ['paid', 'verified'], true);
+
+        if ($requiresPaid && !$isPaid) {
+            return back()->with('error', 'Status pesanan tidak bisa diproses sebelum pembayaran sukses dari gateway.');
+        }
+
+        $order->update(['status' => $nextStatus]);
 
         return back()->with('success', 'Status pesanan diperbarui');
     }
 
-    private function applySourceFilter($query, string $source): void
-    {
-        if ($source === 'walk-in') {
-            $query->whereNotNull('cashier_id');
-            return;
-        }
 
-        if ($source === 'qr') {
-            $query->whereNull('cashier_id');
-        }
-    }
 
     private function applyMenuFilter($query, $menuItemId): void
     {

@@ -64,11 +64,6 @@
                     <span class="text-gray-600">Lokasi</span>
                     <span>{{ $order->full_location }}</span>
                 </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Kasir</span>
-                    <span>{{ $order->cashier?->name ?? '-' }}</span>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -131,13 +126,6 @@
         </div>
     </div>
 
-    @if($order->payment_proof)
-    <div class="bg-white rounded-xl shadow p-6 mb-6">
-        <h3 class="font-semibold text-navy mb-4">Bukti Pembayaran</h3>
-        <img src="{{ asset('storage/' . $order->payment_proof) }}" alt="Bukti Pembayaran" class="max-w-sm rounded-lg border">
-    </div>
-    @endif
-
     <!-- Actions -->
     <div class="bg-white rounded-xl shadow p-6 mb-6">
         <h3 class="font-semibold text-navy mb-4">Aksi</h3>
@@ -146,15 +134,10 @@
                 <i class="fas fa-print mr-1"></i> Print Nota Thermal
             </a>
 
-            {{-- Verify Payment --}}
-            @if($order->isCashless() && $order->payment_status !== 'verified')
-            <form action="{{ route('admin.orders.verify', $order) }}" method="POST">
-                @csrf
-                @method('PATCH')
-                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition">
-                    <i class="fas fa-check mr-1"></i> Verifikasi Pembayaran
-                </button>
-            </form>
+            @if(in_array($order->payment_status, ['pending', 'failed', 'expired']) && $order->payment_method === 'qris')
+            <a href="{{ route('payment.create', $order) }}" target="_blank" class="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 transition">
+                <i class="fas fa-rotate-right mr-1"></i> Buat Ulang Link Bayar
+            </a>
             @endif
 
             {{-- Update Status --}}

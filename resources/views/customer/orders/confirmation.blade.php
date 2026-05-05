@@ -60,12 +60,10 @@
 
             @if($order->payment_status === 'pending' && $order->payment_method === 'qris')
             <div class="mt-4 pt-4 border-t border-yellow-200">
-                <p class="text-xs text-yellow-800 mb-3">Belum bayar? Scan QRIS di bawah:</p>
-                @if($qrisImage)
-                    <div class="bg-white p-2 rounded-xl shadow-sm border border-gray-100 inline-block">
-                        <img src="{{ asset('storage/' . $qrisImage) }}" alt="QRIS" class="h-32 object-contain">
-                    </div>
-                @endif
+                <p class="text-xs text-yellow-800 mb-3">Lanjutkan pembayaran Anda melalui iPaymu.</p>
+                <a href="{{ $order->payment_gateway_url ?: route('payment.create', $order) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-navy-900 text-white rounded-lg text-sm font-semibold hover:bg-navy-800 transition">
+                    <i class="fas fa-arrow-right"></i> Bayar Sekarang
+                </a>
             </div>
             @endif
         </div>

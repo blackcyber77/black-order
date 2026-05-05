@@ -46,6 +46,7 @@ Route::get('/orders/track', [OrderController::class, 'track'])->name('orders.tra
 
 // Payment Gateway Routes (Public - for webhooks)
 Route::prefix('payment')->name('payment.')->group(function () {
+    Route::get('/create/{order}', [PaymentController::class, 'create'])->name('create');
     Route::post('/callback', [PaymentController::class, 'callback'])->name('callback');
     Route::post('/notification', [PaymentController::class, 'notification'])->name('notification');
     Route::get('/{order}/status', [PaymentController::class, 'checkStatus'])->name('status');
@@ -75,14 +76,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Categories
     Route::resource('categories', CategoryController::class);
 
-    // Menu Management (POS + QR Availability)
+    // Menu Management
     Route::resource('menus', MenuItemController::class)->except(['show']);
     Route::patch('/menus/{menu}/availability', [MenuItemController::class, 'toggleAvailability'])->name('menus.toggle-availability');
+    Route::get('/menu-promos', [MenuItemController::class, 'promos'])->name('menus.promos');
+    Route::post('/menu-promos', [MenuItemController::class, 'storePromo'])->name('menus.promos.store');
+    Route::delete('/menu-promos/{menu}', [MenuItemController::class, 'destroyPromo'])->name('menus.promos.destroy');
     
     // Orders
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/report', [AdminOrderController::class, 'report'])->name('orders.report');
     Route::get('/orders/notifications/qr', [AdminOrderController::class, 'qrNotifications'])->name('orders.qr-notifications');
+    Route::get('/orders/notifications/all', [AdminOrderController::class, 'allNotifications'])->name('orders.all-notifications');
     Route::get('/orders/{order}/thermal-print', [AdminOrderController::class, 'thermalPrint'])->name('orders.thermal-print');
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}/verify', [AdminOrderController::class, 'verifyPayment'])->name('orders.verify');

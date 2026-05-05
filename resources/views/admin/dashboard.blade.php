@@ -57,9 +57,7 @@
                 <p class="text-slate-500 text-sm">Klik ikon/filter untuk langsung ke detail fitur yang dipilih.</p>
             </div>
             <div class="flex flex-wrap gap-2">
-                <a href="{{ route('admin.orders.report', ['source' => 'all', 'period' => 'today']) }}" class="px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Keseluruhan</a>
-                <a href="{{ route('admin.orders.report', ['source' => 'walk-in', 'period' => 'today']) }}" class="px-3 py-2 text-xs font-semibold rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200">Walk-in</a>
-                <a href="{{ route('admin.orders.report', ['source' => 'qr', 'period' => 'today']) }}" class="px-3 py-2 text-xs font-semibold rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200">QR Code</a>
+                <a href="{{ route('admin.orders.report', ['period' => 'today']) }}" class="px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Keseluruhan</a>
                 <a href="{{ route('admin.orders.index') }}" class="px-3 py-2 text-xs font-semibold rounded-lg bg-navy-900 text-white hover:bg-navy-800">Detail Pesanan</a>
             </div>
         </div>
@@ -69,7 +67,6 @@
                 <thead class="bg-slate-50 border-b border-slate-100">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Order</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Sumber</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Lokasi</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Total</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
@@ -83,13 +80,7 @@
                             <p class="font-mono text-sm font-semibold text-navy-900">{{ $order->order_number }}</p>
                             <p class="text-xs text-slate-500">{{ $order->created_at->format('d M Y H:i') }}</p>
                         </td>
-                        <td class="px-6 py-4 text-sm">
-                            @php $isWalkIn = !is_null($order->cashier_id); @endphp
-                            <span class="px-2 py-1 text-xs rounded-full {{ $isWalkIn ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700' }}">
-                                {{ $isWalkIn ? 'Walk-in' : 'QR Code' }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-slate-700">{{ $order->full_location }}</td>
+                    <td class="px-6 py-4 text-sm text-slate-700">{{ $order->full_location }}</td>
                         <td class="px-6 py-4 text-sm font-semibold text-navy-900">{{ $order->formatted_total }}</td>
                         <td class="px-6 py-4">
                             <span class="px-2 py-1 text-xs font-medium rounded-full
@@ -112,7 +103,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-10 text-center text-slate-500">Belum ada riwayat pesanan.</td>
+                    <td colspan="5" class="px-6 py-10 text-center text-slate-500">Belum ada riwayat pesanan.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -132,24 +123,18 @@
             </a>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
-            <a href="{{ route('admin.orders.report', ['source' => 'all']) }}" class="bg-white/10 rounded-xl p-4 hover:bg-white/15 transition block">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+            <a href="{{ route('admin.orders.report') }}" class="bg-white/10 rounded-xl p-4 hover:bg-white/15 transition block">
                 <p class="text-xs uppercase text-white/60">Total Pesanan</p>
                 <p class="text-2xl font-bold mt-1">{{ number_format($totalOrders) }}</p>
             </a>
-            <a href="{{ route('admin.orders.report', ['source' => 'walk-in']) }}" class="bg-white/10 rounded-xl p-4 hover:bg-white/15 transition block">
-                <p class="text-xs uppercase text-white/60">Walk-in</p>
-                <p class="text-2xl font-bold mt-1">{{ number_format($walkInOrders) }}</p>
-            </a>
-            <a href="{{ route('admin.orders.report', ['source' => 'qr']) }}" class="bg-white/10 rounded-xl p-4 hover:bg-white/15 transition block">
-                <p class="text-xs uppercase text-white/60">QR Code</p>
-                <p class="text-2xl font-bold mt-1">{{ number_format($qrOrders) }}</p>
-            </a>
+            <div class="bg-white/10 rounded-xl p-4">
+                <p class="text-xs uppercase text-white/60">Pendapatan Bulan Ini</p>
+                <p class="text-2xl font-bold mt-1">Rp {{ number_format((float) $monthlyRevenue, 0, ',', '.') }}</p>
+            </div>
         </div>
 
-        <div class="mt-5 text-sm text-white/70">
-            Pendapatan bulan ini: <span class="font-semibold text-white">Rp {{ number_format((float) $monthlyRevenue, 0, ',', '.') }}</span>
-        </div>
+
     </div>
 </div>
 @endsection

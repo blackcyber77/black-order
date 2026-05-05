@@ -18,11 +18,21 @@ class MenuItem extends Model
         'price',
         'image',
         'is_available',
+        'is_promo',
+        'is_best_seller',
+        'promo_type',
+        'promo_title',
+        'promo_original_price',
+        'promo_sort_order',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'is_available' => 'boolean',
+        'is_promo' => 'boolean',
+        'is_best_seller' => 'boolean',
+        'promo_original_price' => 'decimal:2',
+        'promo_sort_order' => 'integer',
     ];
 
 
@@ -42,8 +52,26 @@ class MenuItem extends Model
         return $query->where('is_available', true);
     }
 
+    public function scopePromoFirst($query)
+    {
+        return $query
+            ->orderByDesc('is_promo')
+            ->orderByRaw('CASE WHEN is_promo = 1 THEN COALESCE(promo_sort_order, 9999) ELSE 9999 END ASC')
+            ->orderByDesc('is_best_seller')
+            ->latest('id');
+    }
+
     public function getFormattedPriceAttribute(): string
     {
         return 'Rp ' . number_format($this->price, 0, ',', '.');
+    }
+
+    public function getFormattedPromoOriginalPriceAttribute(): string
+    {
+        if (!$this->promo_original_price) {
+            return '';
+        }
+
+        return 'Rp ' . number_format((float) $this->promo_original_price, 0, ',', '.');
     }
 }

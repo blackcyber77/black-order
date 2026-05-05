@@ -33,7 +33,6 @@ class Transaction extends Model
         return match($this->payment_method) {
             'qris' => 'QRIS',
             'bank_transfer' => 'Transfer Bank',
-            'tunai' => 'Tunai',
             default => strtoupper($this->payment_method),
         };
     }

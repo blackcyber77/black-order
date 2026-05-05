@@ -9,15 +9,7 @@
 </div>
 
 <form method="GET" action="{{ route('admin.orders.report') }}" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-        <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Sumber Pesanan</label>
-            <select name="source" class="w-full px-3 py-2 border rounded-lg text-sm">
-                <option value="all" {{ request('source', 'all') === 'all' ? 'selected' : '' }}>Semua</option>
-                <option value="walk-in" {{ request('source') === 'walk-in' ? 'selected' : '' }}>Walk-in (POS)</option>
-                <option value="qr" {{ request('source') === 'qr' ? 'selected' : '' }}>QR Code</option>
-            </select>
-        </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Filter Per Item</label>
             <select name="menu_item_id" class="w-full px-3 py-2 border rounded-lg text-sm">
@@ -53,18 +45,10 @@
     </div>
 </form>
 
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
     <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
         <p class="text-xs uppercase text-gray-500">Total Pesanan</p>
         <p class="text-2xl font-bold text-navy-900 mt-1">{{ number_format($summary['total_orders']) }}</p>
-    </div>
-    <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
-        <p class="text-xs uppercase text-gray-500">Pesanan Walk-in</p>
-        <p class="text-2xl font-bold text-orange-600 mt-1">{{ number_format($summary['walk_in_orders']) }}</p>
-    </div>
-    <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
-        <p class="text-xs uppercase text-gray-500">Pesanan QR Code</p>
-        <p class="text-2xl font-bold text-blue-600 mt-1">{{ number_format($summary['qr_orders']) }}</p>
     </div>
     <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
         <p class="text-xs uppercase text-gray-500">Total Omzet</p>
@@ -77,7 +61,6 @@
         <thead class="bg-gray-50">
             <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">No. Pesanan</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sumber</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pelanggan</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
@@ -89,12 +72,6 @@
             @forelse($orders as $order)
             <tr>
                 <td class="px-6 py-4 text-sm font-semibold text-navy-900">{{ $order->order_number }}</td>
-                <td class="px-6 py-4 text-sm">
-                    @php $isWalkIn = !is_null($order->cashier_id); @endphp
-                    <span class="px-2 py-1 text-xs rounded-full {{ $isWalkIn ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700' }}">
-                        {{ $isWalkIn ? 'Walk-in' : 'QR Code' }}
-                    </span>
-                </td>
                 <td class="px-6 py-4 text-sm">{{ $order->customer_name }}</td>
                 <td class="px-6 py-4 text-sm text-gray-700">
                     @foreach($order->items->take(2) as $item)
@@ -112,7 +89,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="7" class="px-6 py-8 text-center text-gray-500">Tidak ada data pesanan untuk filter ini</td>
+                <td colspan="6" class="px-6 py-8 text-center text-gray-500">Tidak ada data pesanan untuk filter ini</td>
             </tr>
             @endforelse
         </tbody>

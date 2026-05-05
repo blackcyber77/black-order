@@ -62,6 +62,11 @@
                 <label for="is_available" class="ml-2 text-sm text-gray-700">Tersedia untuk POS & QR Order</label>
             </div>
 
+            <div class="flex items-center">
+                <input type="checkbox" name="is_best_seller" value="1" id="is_best_seller" {{ old('is_best_seller', $menu->is_best_seller) ? 'checked' : '' }} class="rounded text-orange-600 focus:ring-orange-500">
+                <label for="is_best_seller" class="ml-2 text-sm text-gray-700">Tandai sebagai Best Seller</label>
+            </div>
+
             <div class="flex gap-4 pt-4 border-t border-gray-100">
                 <a href="{{ route('admin.menus.index') }}" class="flex-1 py-3 border border-gray-300 text-center rounded-xl hover:bg-gray-50 transition">Batal</a>
                 <button type="submit" class="flex-1 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition">Update Menu</button>
@@ -70,4 +75,3 @@
     </div>
 </div>
 @endsection
-

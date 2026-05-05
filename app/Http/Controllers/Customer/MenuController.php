@@ -26,7 +26,7 @@ class MenuController extends Controller
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        $menuItems = $query->latest()->get();
+        $menuItems = $query->promoFirst()->get();
 
         // Handle table session logic from QR URL (/menu?table=XX)
         if ($request->filled('table')) {

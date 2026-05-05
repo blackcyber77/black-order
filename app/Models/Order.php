@@ -19,7 +19,6 @@ class Order extends Model
         'customer_name',
         'customer_phone',
         'customer_email',
-        'cashier_id',
         'payment_method',
         'payment_status',
         'payment_proof',
@@ -29,9 +28,6 @@ class Order extends Model
         'payment_gateway_token',
         'payment_expiry',
         'paid_at',
-        'held_at',
-        'voided_at',
-        'void_reason',
         'subtotal',
         'service_fee',
         'delivery_fee',
@@ -47,8 +43,6 @@ class Order extends Model
         'total' => 'decimal:2',
         'payment_expiry' => 'datetime',
         'paid_at' => 'datetime',
-        'held_at' => 'datetime',
-        'voided_at' => 'datetime',
     ];
 
     const STATUS_PENDING = 'pending';
@@ -57,29 +51,17 @@ class Order extends Model
     const STATUS_CANCELLED = 'cancelled';
 
     /**
-     * Available payment methods:
-     * - 'qris'          : QRIS scan (customer & POS)
-     * - 'bank_transfer'  : Transfer bank (customer)
-     * - 'tunai'          : Cash / tunai (POS walk-in only)
+     * Payment methods (cashless via iPaymu gateway)
      */
     const PAYMENT_QRIS = 'qris';
     const PAYMENT_BANK_TRANSFER = 'bank_transfer';
-    const PAYMENT_TUNAI = 'tunai';
 
     /**
-     * Payment methods available for customer (QR ordering)
+     * Payment methods available for QR ordering
      */
     public static function customerPaymentMethods(): array
     {
         return [self::PAYMENT_QRIS];
-    }
-
-    /**
-     * Payment methods available for POS (kasir)
-     */
-    public static function posPaymentMethods(): array
-    {
-        return [self::PAYMENT_TUNAI, self::PAYMENT_QRIS];
     }
 
     protected static function boot()
@@ -103,10 +85,7 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function cashier(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'cashier_id');
-    }
+
 
     public function transaction()
     {
@@ -119,7 +98,7 @@ class Order extends Model
             return 'Meja ' . $this->table_number;
         }
 
-        return 'Walk-In / Takeaway';
+        return '-';
     }
 
     public function getFormattedTotalAttribute(): string
@@ -132,21 +111,12 @@ class Order extends Model
         return match($this->payment_method) {
             'qris' => 'QRIS',
             'bank_transfer' => 'Transfer Bank',
-            'tunai' => 'Tunai',
             default => strtoupper($this->payment_method),
         };
     }
 
     public function getStatusLabelAttribute(): string
     {
-        if ($this->held_at && $this->status === self::STATUS_PENDING) {
-            return 'Ditahan';
-        }
-
-        if (!$this->held_at && $this->status === self::STATUS_PROCESSING) {
-            return 'Aktif';
-        }
-
         return match($this->status) {
             'pending' => 'Menunggu Konfirmasi',
             'confirmed' => 'Dikonfirmasi',
@@ -224,19 +194,5 @@ class Order extends Model
                      ->whereIn('payment_method', [self::PAYMENT_QRIS, self::PAYMENT_BANK_TRANSFER]);
     }
 
-    public function scopeHeld($query)
-    {
-        return $query->whereNotNull('held_at');
-    }
 
-    public function scopeActivePos($query)
-    {
-        return $query->whereNull('held_at')
-            ->whereIn('status', [self::STATUS_PENDING, self::STATUS_PROCESSING]);
-    }
-
-    public function isHeld(): bool
-    {
-        return $this->held_at !== null;
-    }
 }
