@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\MenuItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class MenuItemController extends Controller
@@ -39,6 +40,16 @@ class MenuItemController extends Controller
 
     public function promos()
     {
+        $promoFeatureReady = $this->promoColumnsReady();
+
+        if (!$promoFeatureReady) {
+            return view('admin.menus.promos', [
+                'promoMenus' => collect(),
+                'menuItems' => collect(),
+                'promoFeatureReady' => false,
+            ])->with('error', 'Fitur promo/bundling belum aktif di database. Jalankan migrasi terbaru terlebih dahulu.');
+        }
+
         $promoMenus = MenuItem::with('category')
             ->where('is_promo', true)
             ->promoFirst()
@@ -48,11 +59,21 @@ class MenuItemController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.menus.promos', compact('promoMenus', 'menuItems'));
+        return view('admin.menus.promos', compact('promoMenus', 'menuItems', 'promoFeatureReady'));
     }
 
     public function storePromo(Request $request)
     {
+        if (!$this->promoColumnsReady()) {
+            return back()->with('error', 'Fitur promo/bundling belum aktif di database. Jalankan migrasi terbaru terlebih dahulu.');
+        }
+
+        $request->merge([
+            'promo_title' => trim((string) $request->input('promo_title')),
+            'promo_original_price' => $this->normalizeMoneyInput($request->input('promo_original_price')),
+            'promo_sort_order' => $this->normalizeIntegerInput($request->input('promo_sort_order')),
+        ]);
+
         $validated = $request->validate([
             'menu_item_id' => 'required|exists:menu_items,id',
             'promo_type' => 'required|in:promo,bundling',
@@ -75,6 +96,10 @@ class MenuItemController extends Controller
 
     public function destroyPromo(MenuItem $menu)
     {
+        if (!$this->promoColumnsReady()) {
+            return back()->with('error', 'Fitur promo/bundling belum aktif di database. Jalankan migrasi terbaru terlebih dahulu.');
+        }
+
         $menu->update([
             'is_promo' => false,
             'promo_type' => null,
@@ -173,5 +198,84 @@ class MenuItemController extends Controller
             : "{$menu->name} disembunyikan dari POS & QR order.";
 
         return back()->with('success', $message);
+    }
+
+    private function promoColumnsReady(): bool
+    {
+        static $ready = null;
+        if ($ready !== null) {
+            return $ready;
+        }
+
+        $ready = Schema::hasColumns('menu_items', [
+            'is_promo',
+            'promo_type',
+            'promo_title',
+            'promo_original_price',
+            'promo_sort_order',
+        ]);
+
+        return $ready;
+    }
+
+    private function normalizeMoneyInput(mixed $value): mixed
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return null;
+        }
+
+        // Support input formats: 25000, 25.000, 25,000, Rp 25.000
+        $normalized = preg_replace('/[^0-9,.\-]/', '', $raw);
+        if ($normalized === null || $normalized === '') {
+            return $value;
+        }
+
+        $hasDot = str_contains($normalized, '.');
+        $hasComma = str_contains($normalized, ',');
+
+        if ($hasDot && $hasComma) {
+            $normalized = str_replace('.', '', $normalized);
+            $normalized = str_replace(',', '.', $normalized);
+        } elseif ($hasComma) {
+            $parts = explode(',', $normalized);
+            $last = end($parts);
+            if ($last !== false && strlen($last) <= 2) {
+                $normalized = implode('', array_slice($parts, 0, -1)) . '.' . $last;
+            } else {
+                $normalized = str_replace(',', '', $normalized);
+            }
+        } elseif ($hasDot) {
+            $parts = explode('.', $normalized);
+            $last = end($parts);
+            if ($last !== false && strlen($last) > 2) {
+                $normalized = str_replace('.', '', $normalized);
+            }
+        }
+
+        return is_numeric($normalized) ? (float) $normalized : $value;
+    }
+
+    private function normalizeIntegerInput(mixed $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return null;
+        }
+
+        $normalized = preg_replace('/[^0-9\-]/', '', $raw);
+        if ($normalized === null || $normalized === '' || !is_numeric($normalized)) {
+            return null;
+        }
+
+        return (int) $normalized;
     }
 }
