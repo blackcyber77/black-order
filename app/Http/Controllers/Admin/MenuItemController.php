@@ -119,24 +119,39 @@ class MenuItemController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $rules = [
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'image' => 'nullable|image|max:2048',
             'is_available' => 'nullable|boolean',
-            'is_best_seller' => 'nullable|boolean',
-        ]);
+        ];
 
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('menus', 'public');
+        if ($this->bestSellerColumnReady()) {
+            $rules['is_best_seller'] = 'nullable|boolean';
         }
 
-        $validated['is_available'] = $request->boolean('is_available', true);
-        $validated['is_best_seller'] = $request->boolean('is_best_seller');
+        $validated = $request->validate($rules);
 
-        MenuItem::create($validated);
+        try {
+            if ($request->hasFile('image')) {
+                $validated['image'] = $request->file('image')->store('menus', 'public');
+            }
+
+            $validated['is_available'] = $request->boolean('is_available', true);
+            if ($this->bestSellerColumnReady()) {
+                $validated['is_best_seller'] = $request->boolean('is_best_seller');
+            }
+
+            MenuItem::create($validated);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Gagal menyimpan menu. Pastikan migrasi terbaru sudah dijalankan dan folder storage dapat ditulis.');
+        }
 
         if ($request->has('save_and_create_another')) {
             return back()->with('success', 'Menu berhasil ditambahkan. Silakan tambah menu baru.');
@@ -153,26 +168,41 @@ class MenuItemController extends Controller
 
     public function update(Request $request, MenuItem $menu)
     {
-        $validated = $request->validate([
+        $rules = [
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'image' => 'nullable|image|max:2048',
             'is_available' => 'nullable|boolean',
-            'is_best_seller' => 'nullable|boolean',
-        ]);
+        ];
 
-        if ($request->hasFile('image')) {
-            if ($menu->image) {
-                Storage::disk('public')->delete($menu->image);
-            }
-            $validated['image'] = $request->file('image')->store('menus', 'public');
+        if ($this->bestSellerColumnReady()) {
+            $rules['is_best_seller'] = 'nullable|boolean';
         }
 
-        $validated['is_available'] = $request->boolean('is_available');
-        $validated['is_best_seller'] = $request->boolean('is_best_seller');
-        $menu->update($validated);
+        $validated = $request->validate($rules);
+
+        try {
+            if ($request->hasFile('image')) {
+                if ($menu->image) {
+                    Storage::disk('public')->delete($menu->image);
+                }
+                $validated['image'] = $request->file('image')->store('menus', 'public');
+            }
+
+            $validated['is_available'] = $request->boolean('is_available');
+            if ($this->bestSellerColumnReady()) {
+                $validated['is_best_seller'] = $request->boolean('is_best_seller');
+            }
+            $menu->update($validated);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Gagal memperbarui menu. Pastikan migrasi terbaru sudah dijalankan dan folder storage dapat ditulis.');
+        }
 
         return redirect()->route('admin.menus.index')->with('success', 'Menu berhasil diperbarui');
     }
@@ -214,6 +244,18 @@ class MenuItemController extends Controller
             'promo_original_price',
             'promo_sort_order',
         ]);
+
+        return $ready;
+    }
+
+    private function bestSellerColumnReady(): bool
+    {
+        static $ready = null;
+        if ($ready !== null) {
+            return $ready;
+        }
+
+        $ready = Schema::hasColumn('menu_items', 'is_best_seller');
 
         return $ready;
     }
