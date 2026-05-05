@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class MenuItem extends Model
 {
@@ -54,6 +55,19 @@ class MenuItem extends Model
 
     public function scopePromoFirst($query)
     {
+        static $promoColumnsAvailable = null;
+        if ($promoColumnsAvailable === null) {
+            $promoColumnsAvailable = Schema::hasColumns($this->getTable(), [
+                'is_promo',
+                'promo_sort_order',
+                'is_best_seller',
+            ]);
+        }
+
+        if (!$promoColumnsAvailable) {
+            return $query->latest('id');
+        }
+
         return $query
             ->orderByDesc('is_promo')
             ->orderByRaw('CASE WHEN is_promo = 1 THEN COALESCE(promo_sort_order, 9999) ELSE 9999 END ASC')
