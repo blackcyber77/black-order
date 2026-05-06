@@ -14,20 +14,33 @@ class IpaymuService
     {
         $order->loadMissing('items.menuItem');
 
+        $buyerName = (string) $order->customer_name;
+        $buyerEmail = (string) ($order->customer_email ?: 'customer+' . strtolower($order->order_number) . '@example.local');
+        $buyerPhone = (string) ($order->customer_phone ?: '081000000000');
+
         $payload = [
             'account' => $this->va(),
             'product' => $order->items->map(fn ($item) => $item->menuItem?->name ?? 'Menu')->values()->all(),
             'qty' => $order->items->map(fn ($item) => (int) $item->quantity)->values()->all(),
             'price' => $order->items->map(fn ($item) => (int) round((float) $item->price))->values()->all(),
             'description' => $order->items->map(fn ($item) => 'Order ' . $order->order_number)->values()->all(),
-            // Payment Redirect: prefill buyer details so user doesn't retype on iPaymu page.
-            // iPaymu API v2 (sandbox): use buyerName/buyerEmail/buyerPhone.
-            'buyerName' => (string) $order->customer_name,
-            'buyerEmail' => (string) ($order->customer_email ?: 'customer+' . strtolower($order->order_number) . '@example.local'),
-            'buyerPhone' => (string) ($order->customer_phone ?: '081000000000'),
+            // Prefill buyer details on iPaymu Payment Page.
+            // iPaymu API v2 commonly expects name/email/phone (per official wrapper),
+            // while some docs mention buyerName/buyerEmail/buyerPhone for Redirect Payment.
+            // Send both to maximize compatibility across environments.
+            'name' => $buyerName,
+            'email' => $buyerEmail,
+            'phone' => $buyerPhone,
+            'buyerName' => $buyerName,
+            'buyerEmail' => $buyerEmail,
+            'buyerPhone' => $buyerPhone,
+            // Callback URLs: support both naming conventions (notifyUrl/returnUrl/cancelUrl and ureturn/unotify/ucancel).
             'notifyUrl' => route('payment.callback'),
             'returnUrl' => route('orders.confirmation', $order->order_number),
             'cancelUrl' => route('orders.confirmation', $order->order_number),
+            'unotify' => route('payment.callback'),
+            'ureturn' => route('orders.confirmation', $order->order_number),
+            'ucancel' => route('orders.confirmation', $order->order_number),
             'referenceId' => $order->order_number,
             'expired' => (int) config('services.ipaymu.expired', 24),
             'expiredType' => config('services.ipaymu.expired_type', 'hours'),
