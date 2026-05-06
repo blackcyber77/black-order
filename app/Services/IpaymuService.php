@@ -20,9 +20,11 @@ class IpaymuService
             'qty' => $order->items->map(fn ($item) => (int) $item->quantity)->values()->all(),
             'price' => $order->items->map(fn ($item) => (int) round((float) $item->price))->values()->all(),
             'description' => $order->items->map(fn ($item) => 'Order ' . $order->order_number)->values()->all(),
-            'name' => $order->customer_name,
-            'email' => $order->customer_email ?: 'customer+' . strtolower($order->order_number) . '@example.local',
-            'phone' => $order->customer_phone ?: '081000000000',
+            // Payment Redirect: prefill buyer details so user doesn't retype on iPaymu page.
+            // iPaymu API v2 (sandbox): use buyerName/buyerEmail/buyerPhone.
+            'buyerName' => (string) $order->customer_name,
+            'buyerEmail' => (string) ($order->customer_email ?: 'customer+' . strtolower($order->order_number) . '@example.local'),
+            'buyerPhone' => (string) ($order->customer_phone ?: '081000000000'),
             'notifyUrl' => route('payment.callback'),
             'returnUrl' => route('orders.confirmation', $order->order_number),
             'cancelUrl' => route('orders.confirmation', $order->order_number),
