@@ -72,12 +72,20 @@ class OrderController extends Controller
         $allowedMethods = implode(',', Order::customerPaymentMethods());
         
         $request->validate([
-            'customer_name' => 'required|string|max:255',
-            'customer_phone' => 'required|string|max:20',
-            'customer_email' => 'nullable|email|max:255',
-            'table_number' => 'required|string|max:50',
+            'customer_name'  => 'required|string|max:255',
+            'customer_phone' => ['required', 'string', 'min:9', 'max:15', 'regex:/^[0-9]+$/'],
+            'customer_email' => 'required|email|max:255',
+            'table_number'   => 'required|string|max:50',
             'payment_method' => "required|in:{$allowedMethods}",
-            'notes' => 'nullable|string|max:1000',
+            'notes'          => 'nullable|string|max:1000',
+        ], [
+            'customer_name.required'  => 'Nama lengkap wajib diisi.',
+            'customer_phone.required' => 'Nomor HP wajib diisi.',
+            'customer_phone.min'      => 'Nomor HP minimal 9 digit.',
+            'customer_phone.regex'    => 'Nomor HP hanya boleh berisi angka.',
+            'customer_email.required' => 'Email wajib diisi untuk konfirmasi pembayaran.',
+            'customer_email.email'    => 'Format email tidak valid.',
+            'table_number.required'   => 'Nomor meja tidak terdeteksi. Silakan scan ulang QR.',
         ]);
 
         $cart = session()->get('cart', []);
@@ -117,23 +125,32 @@ class OrderController extends Controller
             $deliveryFee = 0;
             $total = $subtotal + $serviceFee + $deliveryFee;
 
+            // Normalize phone: strip leading 0, +62, or 62 so iPaymu gets clean number
+            $rawPhone = preg_replace('/\D/', '', (string) $request->customer_phone);
+            if (str_starts_with($rawPhone, '62')) {
+                $rawPhone = substr($rawPhone, 2);
+            } elseif (str_starts_with($rawPhone, '0')) {
+                $rawPhone = substr($rawPhone, 1);
+            }
+            $phone = '0' . $rawPhone; // store with leading 0 (e.g. 081234567890)
+
             // Create order — payment always starts as 'pending' for cashless
             // Will be updated by payment gateway callback or admin verification
             $order = Order::create([
-                'tower_id' => null,
-                'table_number' => $request->table_number,
-                'customer_name' => $request->customer_name,
-                'customer_phone' => $request->customer_phone,
-                'customer_email' => $request->customer_email,
-                'payment_method' => $request->payment_method,
-                'payment_status' => 'pending',
+                'tower_id'        => null,
+                'table_number'    => $request->table_number,
+                'customer_name'   => $request->customer_name,
+                'customer_phone'  => $phone,
+                'customer_email'  => $request->customer_email,
+                'payment_method'  => $request->payment_method,
+                'payment_status'  => 'pending',
                 'payment_gateway' => 'ipaymu',
-                'subtotal' => $subtotal,
-                'service_fee' => $serviceFee,
-                'delivery_fee' => $deliveryFee,
-                'total' => $total,
-                'status' => 'pending',
-                'notes' => $request->notes,
+                'subtotal'        => $subtotal,
+                'service_fee'     => $serviceFee,
+                'delivery_fee'    => $deliveryFee,
+                'total'           => $total,
+                'status'          => 'pending',
+                'notes'           => $request->notes,
             ]);
 
             // Create order items
